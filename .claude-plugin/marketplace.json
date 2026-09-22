@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "unity-ai-skills",
+  "description": "Skills for game development in Unity — code, project structure, and in-engine work.",
+  "owner": {
+    "name": "Xenoneqq",
+    "url": "https://github.com/Xenoneqq"
+  },
+  "plugins": [
+    {
+      "name": "unity-ai-skills",
+      "source": "./",
+      "category": "development",
+      "description": "Build games in Unity with Claude Code: engine-idiomatic C#, project and asset structure, and in-editor work."
+    }
+  ]
+}
