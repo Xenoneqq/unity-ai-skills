@@ -1,7 +1,7 @@
 # Working on this repo
 
 This repo *is* a Claude Code plugin. People install it; the skills in `skills/` are the product.
-It is not a Unity project and never contains one — no `Assets/`, no `ProjectSettings/`, no
+It is not a Unity project and never contains one. No `Assets/`, no `ProjectSettings/`, no
 `.meta` files. Anything Unity-specific in here is text a skill reads.
 
 ## Layout
@@ -14,7 +14,7 @@ skills/<name>/references/*.md    optional detail a skill reads on demand
 ```
 
 A plugin only loads `commands/`, `agents/`, `skills/`, `hooks/` and `.mcp.json`. **This file is
-not shipped to anyone who installs the plugin** — it only guides work in this checkout. Anything
+not shipped to anyone who installs the plugin.** It only guides work in this checkout. Anything
 users need to reach belongs in a skill.
 
 These notes live in `CONTRIBUTING.md` rather than `CLAUDE.md` on purpose: `claude plugin validate`
@@ -43,10 +43,11 @@ CLAUDE_CONFIG_DIR=$(mktemp -d) sh -c 'claude plugin marketplace add "$PWD" >/dev
 - One directory under `skills/`, one `SKILL.md`, frontmatter `name` matching the directory.
 - The `description` decides when the skill fires. Write it as trigger phrases a user would
   actually say, not as a summary of the contents.
-- Add it to the README table.
-- Keep `SKILL.md` to what every run needs. Detail that only some runs need — a prompt template,
-  a runbook, a per-case spec — goes in `references/<topic>.md`, and `SKILL.md` says which step
-  reads it. A reference under about 30 lines is not worth the extra read; keep it inline.
+- Add it to the README, in whichever of its tables matches what the skill is for.
+- Keep `SKILL.md` to what every run needs. Detail that only some runs need, such as a prompt
+  template, a runbook or a per-case spec, goes in `references/<topic>.md`, and `SKILL.md` says
+  which step reads it. A reference under about 30 lines is not worth the extra read; keep it
+  inline.
 
 ## House rules for skill content
 
@@ -56,8 +57,8 @@ CLAUDE_CONFIG_DIR=$(mktemp -d) sh -c 'claude plugin marketplace add "$PWD" >/dev
   assembly definitions, naming or commit conventions, the skill says to follow those and treats
   its own defaults as the fallback.
 - **Works across Unity versions.** Do not pin behaviour to one editor release. Where a version
-  matters — a package, an API that moved, a render pipeline — the skill says to check the
-  project's version rather than assuming one.
+  matters, such as a package, an API that moved or a render pipeline, the skill says to check
+  the project's version rather than assuming one.
 - **Never touches generated or engine-owned state.** No editing `.meta` files by hand, no
   hand-writing scene or prefab YAML, no `Library/` surgery. A skill that needs those says to do
   it through the editor.
