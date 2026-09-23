@@ -25,7 +25,11 @@ and bake the result into its prompt as a copy-paste runbook:
 - **Which path the project is on**: the connected editor (Unity 6.0+, Pipeline installed) or
   batch mode. They are driven completely differently, and the agent must not have to choose.
 - **The editor binary or the CLI invocation**, exact, with the project path.
-- **The exact command per job** — tests, build, import check — copy-paste ready.
+- **The exact command per job** — tests, play-mode smoke, build, import check — copy-paste ready.
+  A build is minutes; say so, and say it is per task rather than per milestone.
+- **Whether play-mode smoke works in this project at all**, and by which mechanism. It is the
+  main way to prove a game starts when there are no tests, and it is not guaranteed to work
+  headlessly. Establish it once; record the answer so nobody re-derives it.
 - **How long each normally takes**, and the timeout past which to give up. Say plainly that a
   first run against a cold `Library/` reimports the whole project and can take many minutes
   while looking identical to a hang.
@@ -40,9 +44,13 @@ agent go looking.
 
 Before any worker's request:
 
-1. **Failing tests** on the base branch, untouched, by name.
-2. **Clean-import state** — console errors, warnings, missing references, broken shaders already
+1. **Whether the project has any tests at all.** Most game projects do not. This decides how high
+   the verification ladder goes, and the manager needs it before the first brief.
+2. **Failing tests** on the base branch, untouched, by name, if there are any.
+3. **Clean-import state** — console errors, warnings, missing references, broken shaders already
    present before anyone touched anything.
+4. **Existing broken references** — the base branch's unresolved-GUID list, so a worker is judged
+   only on what it added.
 
 Both go verbatim into every worker brief and into `session-materials/`. Without them a worker
 either chases breakage it did not cause or excuses breakage it did.

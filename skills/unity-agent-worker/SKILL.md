@@ -66,18 +66,27 @@ is expensive. Never drive it yourself:
 4. **One outstanding request at a time.** Wait for the verdict before sending another, and keep
    working on anything that does not depend on it.
 
-## 5. The gate, before every commit
+## 5. Verify — as far as the project allows
 
-Never commit on a red gate. Never commit something you have not run.
+Read `references/verification.md`. Most game projects have no automated tests, so verification is
+a ladder: climb as far as this project allows, then **say which rung you reached.** Never report
+"tests pass" or "verified" for a project that has no tests.
+
+**Rung 0 and 1 run before every commit.** Never commit on a red gate, and never commit something
+you have not run.
 
 - **It compiles.** No `error CS` anywhere in the run.
-- **Tests pass**, apart from the known-failing baseline you were given, by name. A failure
-  outside that list is yours and blocks the commit. Chasing one inside it is wasted work;
-  hiding a real one behind "already broken" is worse.
+- **Tests pass** *if the project has any*, apart from the known-failing baseline you were given,
+  by name. A failure outside that list is yours and blocks the commit. Chasing one inside it is
+  wasted work; hiding a real one behind "already broken" is worse. If the project has no tests,
+  say that rather than reporting a green suite.
 - **No new import errors** beyond the baseline: missing references, broken shaders, console
   errors on a clean import.
+- **No new broken references.** The most common real breakage in Unity and it needs no test
+  framework. `references/verification.md` has the scan; run it on the base branch too, so only
+  the new ones count as yours.
 - **Every asset is paired with its `.meta`**, and every `.meta` with its asset. An unpaired new
-  asset breaks references for everyone on merge — this is a blocker, not a nitpick:
+  asset breaks references for everyone on merge — a blocker, not a nitpick:
 
 ```bash
 git status --porcelain -z -- Assets | while IFS= read -r -d '' e; do
@@ -91,8 +100,17 @@ done
 ```
 
 - **The scene diff is intended.** `git diff --stat -- '*.unity'` should be empty unless the task
-  genuinely needed a scene change. If it is not empty and you did not mean it, revert it before
-  committing — whole file, not partial hunks.
+  genuinely needed a scene change. If it is not and you did not mean it, revert the whole file —
+  not partial hunks — before committing.
+
+**Rungs 2 and 3 run once, when the task is otherwise done**: does the game start, and does it
+build. Both need the editor, so both go through the editor agent. They are slow; do not run them
+per milestone.
+
+**Rung 4 is a human, and it blocks.** When nothing above proves the feature behaves — which on a
+project without tests is most features — write a manual checklist: the scene to open, the exact
+steps, and what counts as failure. Hand it to your manager with the task. **The task is not done
+until a person confirms it.** A reported failure comes back to you as an ordinary fix round.
 
 ## 6. Commits
 
@@ -112,6 +130,10 @@ git log --author="$(git config user.name)" -15 --format='%s'
 - The branch, and every file created or edited, with full paths.
 - **Scenes and prefabs specifically** — what scene diffs exist and why, what prefabs you added
   or changed. Your manager needs this for the conflict report; bury it and merge day gets worse.
+- **The rung you reached**, in one line, and what is still unproven. "Compiles, imports clean, no
+  new broken references, build green; no automated tests in this project, behaviour unverified"
+  is an honest report. "Verified" is not.
+- **The manual checklist**, whenever behaviour is not covered by anything automated.
 - Verification results, pass or fail, with the output.
 - Anything you deviated from, discovered, or left undone, and why.
 

@@ -22,9 +22,15 @@ supplies what it cannot know and pre-answers what it would otherwise stop on.
 - The **anchor files to mirror** — paths, and what each one demonstrates. A worker prompt is only
   as good as the files it points at. Where prefabs of this kind live, which assembly definition
   the code belongs to, what the existing manager or UI screen looks like.
-- **Both baselines, verbatim**: the tests already failing on the base branch by name, and the
-  import errors, missing references and broken shaders already present on a clean checkout.
-  Everything outside those lists is the worker's own regression and blocks its commit.
+- **The baselines, verbatim**: whether this project has tests at all, the tests already failing
+  on the base branch by name, the import errors and broken shaders already present on a clean
+  checkout, and the base branch's existing broken-reference list. Everything outside those lists
+  is the worker's own regression and blocks its commit.
+- **How high the verification ladder goes in this project** — can it run tests, can it be
+  smoke-tested in play mode, is a build affordable per task. The worker must not have to discover
+  this. Say explicitly that it reports the rung it reached and never claims "verified".
+- **That a manual checklist is required** whenever nothing automated proves the behaviour, and
+  that the task is not done until a person confirms it.
 - **Which scenes and prefabs this task is allowed to touch**, and which it must not. This is the
   conflict map, handed down. If it needs something outside that set, it reports rather than
   spreading.
