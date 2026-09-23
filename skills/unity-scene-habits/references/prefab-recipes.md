@@ -72,7 +72,8 @@ EditorSceneManager.SaveScene(scene);
 which defeats the point. Use `AndConnect` unless you deliberately want an unlinked copy.
 
 Name the asset for the thing, not for the scene it came from, and put it where the project
-already keeps that kind of prefab.
+already keeps that kind of prefab — `unity-file-structure-habits` decides that, and a prefab that
+lands in the wrong folder is a move through `AssetDatabase` later, not a drag.
 
 ## Make a variant instead of a copy
 
