@@ -42,6 +42,8 @@ with `claude plugin update` like any other.
 | `unity-manage-work` | Run a task or a backlog as a manager: settle the base branch, cut one branch, order the work from a scene-and-prefab conflict map, delegate to workers one at a time, route every editor run through one shared editor agent, and close with a report and a draft PR file per task. Never pushes. |
 | `unity-agent-worker` | Carry one task end to end in the user's checkout: project rules first, milestones, engine work through `unity-scene-habits`, editor runs through the shared editor agent, and a verification ladder that climbs as far as the project allows and reports which rung it reached. Spawned by `unity-manage-work`, or used on its own. |
 
+| `unity-legacy-migration` | Move old code and assets onto the project's current conventions without breaking references: rename through `AssetDatabase` so GUIDs survive, carry a renamed field's stored values, split large types safely, one change per commit, and verify after every step. |
+| `unity-debug-runtime` | Work out why a running game is wrong when there are no tests to tell you: find the real log, read the exception shape, make it reproducible, narrow it down, and say which environment the answer holds in. |
 | `unity-review-change` | Review a Unity change read-only — a diff, a branch or a PR. Triages by file extension, treats an unpaired `.meta` as a blocker, questions any scene diff, and reports `[BLOCKER]/[SHOULD-FIX]/[NITPICK]` with a SHIP or FIX-FIRST verdict plus what it could not verify. Used standalone or as the review step in `unity-manage-work`. |
 | `unity-skill-package-setup` | Wire a Unity project up to these skills: check the repo's `.gitignore` and scene merging, install the plugin at project scope, scan what the project already is, write a `CLAUDE.md` and `AGENTS.md` that route work to the right skill and offer `unity-manage-work` for every handed-over task, generate a `STRUCTURE.md`, and scaffold the standard asset folders. |
 | `unity-coding-habits` | Good Unity C# habits that hold in any project: serialize private fields, keep lookups out of per-frame code, treat a destroyed object as the fake null it is, pick one way for objects to find each other, keep types small and namespaced, and never restyle code you are only passing through. |
@@ -61,4 +63,4 @@ to follow.
 
 ## Status
 
-Early. Seven skills so far; more coming, and existing ones will keep changing.
+Early. Ten skills so far; more coming, and existing ones will keep changing.
