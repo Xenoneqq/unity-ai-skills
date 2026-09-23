@@ -5,9 +5,10 @@ description: >
   public ones, keep lookups out of per-frame code, treat destroyed `UnityEngine.Object`s as the
   fake null they are, pick one way to find things instead of mixing singletons and scene
   searches, keep types small and namespaced, and never restyle code you are only passing
-  through. Use when writing or reviewing a `MonoBehaviour`, `ScriptableObject` or any C# under
-  `Assets/`; "review this Unity script", "why is my game dropping frames", "is this
-  MonoBehaviour right", "clean up this component", "/unity-coding-habits".
+  through. Use when writing or changing a `MonoBehaviour`, `ScriptableObject` or any C# under
+  `Assets/`; "is this MonoBehaviour right", "clean up this component", "how should I write this
+  component", "/unity-coding-habits". Reviewing a change is `unity-review-change`; diagnosing a
+  game that already runs badly is `unity-debug-runtime`.
 ---
 
 # Unity coding habits
@@ -23,7 +24,8 @@ demonstrates one, follow that. These are the fallback for when nothing says othe
 fields, adding `[SerializeField]`, extracting helpers or converting coroutines in code you merely
 touched turns a reviewable diff into an unreviewable one — and in Unity a field rename silently
 drops every value already serialized in a scene or prefab. Converting old code is real work:
-propose it, get it agreed, do it in its own commit.
+propose it, get it agreed, and do it deliberately — `unity-legacy-migration` is that job, and it
+carries the procedures that keep references and stored values intact.
 
 | Reference | Read it when |
 |---|---|
