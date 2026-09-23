@@ -43,6 +43,8 @@ with `claude plugin update` like any other.
 | `unity-agent-worker` | Carry one task end to end in the user's checkout: project rules first, milestones, engine work through `unity-scene-habits`, editor runs through the shared editor agent, and a verification ladder that climbs as far as the project allows and reports which rung it reached. Spawned by `unity-manage-work`, or used on its own. |
 
 | `unity-skill-package-setup` | Wire a Unity project up to these skills: check the repo's `.gitignore` and scene merging, install the plugin at project scope, scan what the project already is, write a `CLAUDE.md` and `AGENTS.md` that route work to the right skill and offer `unity-manage-work` for every handed-over task, generate a `STRUCTURE.md`, and scaffold the standard asset folders. |
+| `unity-coding-habits` | Good Unity C# habits that hold in any project: serialize private fields, keep lookups out of per-frame code, treat a destroyed object as the fake null it is, pick one way for objects to find each other, keep types small and namespaced, and never restyle code you are only passing through. |
+| `unity-multiplayer-habits` | Building multiplayer with Mirror: server authority for state and client authority for movement, the right direction for every remote call, re-validating on the server, registering spawnable prefabs, and never calling it done without two clients agreeing. |
 | `unity-file-structure-habits` | Decide where a new file or asset goes and keep the layout from drifting: `STRUCTURE.md` is the authority, the project's own conventions win, assets move only through the editor so references survive, and a new category is added deliberately rather than dumped in the nearest folder. |
 
 Run `unity-skill-package-setup` once on a project. After that the usual path is
@@ -58,4 +60,4 @@ to follow.
 
 ## Status
 
-Early. Five skills so far; more coming, and existing ones will keep changing.
+Early. Seven skills so far; more coming, and existing ones will keep changing.
