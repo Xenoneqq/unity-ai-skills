@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "unity-ai-skills",
+  "version": "0.1.0",
+  "description": "Skills for making games in Unity with Claude Code: writing C# that fits the engine, planning project structure, and driving in-engine work.",
+  "author": {
+    "name": "Xenoneqq",
+    "url": "https://github.com/Xenoneqq"
+  },
+  "homepage": "https://github.com/Xenoneqq/unity-ai-skills",
+  "license": "MIT",
+  "keywords": [
+    "unity",
+    "gamedev",
+    "csharp",
+    "game-engine",
+    "level-design",
+    "editor"
+  ]
+}
