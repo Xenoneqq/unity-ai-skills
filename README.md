@@ -1,66 +1,70 @@
 # unity-ai-skills
 
-Skills for game development in Unity. Covers mostly code writing, file structure planning,
-in-engine work and more.
+A Claude Code plugin for making games in Unity. It covers writing C# that fits the engine,
+keeping the project layout sane as it grows, and the parts of the job that happen in the editor.
 
-A Claude Code plugin for working inside a Unity project: writing C# that fits the engine rather
-than fighting it, keeping the project layout sane as it grows, and handling the parts of the job
-that live in the editor. It is built to stay out of your way — the skills follow the project's own
-conventions where it has them, and leave anything outward-facing to you.
+Unity projects break in ways a general coding assistant does not see coming. A scene is one
+shared file that everybody edits, so two people working in the same one conflict every time. An
+asset committed without its meta file silently breaks every reference to it. Most game projects
+have no automated tests, so nothing catches either problem before merge day. These skills exist
+to keep an agent from walking into all three.
 
 ## Install
 
 ```bash
 claude plugin marketplace add Xenoneqq/unity-ai-skills
-```
-
-```bash
 claude plugin install unity-ai-skills@unity-ai-skills
 ```
 
-### For a whole project
-
-Add `--scope project` to both commands to install it for a repo rather than for yourself:
-
-```bash
-claude plugin marketplace add Xenoneqq/unity-ai-skills --scope project
-```
-
-```bash
-claude plugin install unity-ai-skills@unity-ai-skills --scope project
-```
-
-That writes the marketplace and the enabled plugin into the project's `.claude/settings.json`
-and copies nothing. Commit that file and everyone who clones the repo gets the plugin, updated
-with `claude plugin update` like any other.
+To install for a repo rather than for yourself, add `--scope project` to both commands. That
+writes the marketplace and the enabled plugin into the project's `.claude/settings.json` and
+copies nothing. Commit that file and everyone who clones the repo gets the plugin.
 
 ## Skills
 
+Four cover the craft of working in Unity.
+
 | Skill | What it does |
 |---|---|
-| `unity-scene-habits` | Prefab-first habits, driven through the Unity CLI. Group anything groupable into a prefab, edit prefab assets instead of scenes, never break an asset reference, keep the scene out of the diff, and flag it when another branch already edits the same scene. Works against a running editor on Unity 6+, or batch mode on older projects. |
-| `unity-manage-work` | Run a task or a backlog as a manager: settle the base branch, cut one branch, order the work from a scene-and-prefab conflict map, delegate to workers one at a time, route every editor run through one shared editor agent, and close with a report and a draft PR file per task. Never pushes. |
-| `unity-agent-worker` | Carry one task end to end in the user's checkout: project rules first, milestones, engine work through `unity-scene-habits`, editor runs through the shared editor agent, and a verification ladder that climbs as far as the project allows and reports which rung it reached. Spawned by `unity-manage-work`, or used on its own. |
+| `unity-scene-habits` | Prefab-first work through the editor CLI. Keeps the scene out of your diff. |
+| `unity-coding-habits` | Everyday C# habits that hold in any project. |
+| `unity-multiplayer-habits` | Multiplayer with Mirror, starting with which framework the project uses. |
+| `unity-file-structure-habits` | Where a new file or asset belongs, and keeping the layout from drifting. |
 
-| `unity-legacy-migration` | Move old code and assets onto the project's current conventions without breaking references: rename through `AssetDatabase` so GUIDs survive, carry a renamed field's stored values, split large types safely, one change per commit, and verify after every step. |
-| `unity-debug-runtime` | Work out why a running game is wrong when there are no tests to tell you: find the real log, read the exception shape, make it reproducible, narrow it down, and say which environment the answer holds in. |
-| `unity-review-change` | Review a Unity change read-only — a diff, a branch or a PR. Triages by file extension, treats an unpaired `.meta` as a blocker, questions any scene diff, and reports `[BLOCKER]/[SHOULD-FIX]/[NITPICK]` with a SHIP or FIX-FIRST verdict plus what it could not verify. Used standalone or as the review step in `unity-manage-work`. |
-| `unity-skill-package-setup` | Wire a Unity project up to these skills: check the repo's `.gitignore` and scene merging, install the plugin at project scope, scan what the project already is, write a `CLAUDE.md` and `AGENTS.md` that route work to the right skill and offer `unity-manage-work` for every handed-over task, generate a `STRUCTURE.md`, and scaffold the standard asset folders. |
-| `unity-coding-habits` | Good Unity C# habits that hold in any project: serialize private fields, keep lookups out of per-frame code, treat a destroyed object as the fake null it is, pick one way for objects to find each other, keep types small and namespaced, and never restyle code you are only passing through. |
-| `unity-multiplayer-habits` | Building multiplayer in Unity: settle the framework before any networked code exists (Mirror or Netcode for GameObjects, offered only where the editor supports it), then server authority for state and client authority for movement, the right direction for every remote call, re-validating on the server, registering spawnable prefabs, and never calling it done without two clients agreeing. |
-| `unity-file-structure-habits` | Decide where a new file or asset goes and keep the layout from drifting: `STRUCTURE.md` is the authority, the project's own conventions win, assets move only through the editor so references survive, and a new category is added deliberately rather than dumped in the nearest folder. |
+Three run the work.
 
-Run `unity-skill-package-setup` once on a project. After that the usual path is
-`unity-manage-work` when there is a list to get through, `unity-agent-worker` for a single task,
-and `unity-scene-habits` underneath both whenever the engine is involved.
+| Skill | What it does |
+|---|---|
+| `unity-skill-package-setup` | Wires a project up to these skills. Run it once. |
+| `unity-manage-work` | Plans a backlog around scene conflicts and delegates it. Never pushes. |
+| `unity-agent-worker` | Carries one task end to end, verifying as it goes. |
 
-More are being written; the table fills in as they land.
+Three check and repair.
+
+| Skill | What it does |
+|---|---|
+| `unity-review-change` | Reviews a diff, a branch or a PR. Read-only. |
+| `unity-debug-runtime` | Works out why a running game is wrong when no test will tell you. |
+| `unity-legacy-migration` | Moves old code onto current conventions without breaking references. |
+
+## How they fit
+
+Run `unity-skill-package-setup` once on a project. It writes a `CLAUDE.md` that routes each kind
+of work to the right skill, so the rest fire on their own.
+
+After that, reach for `unity-manage-work` when there is a list to get through and
+`unity-agent-worker` for a single task. `unity-scene-habits` sits underneath both whenever the
+engine is involved.
+
+Three rules run through all of them. Prefer prefabs to scenes. Never hand-edit Unity's YAML or
+meta files, because the editor is the only safe writer. Never claim a change is verified further
+than it actually was.
 
 ## Contributing
 
-[CONTRIBUTING.md](CONTRIBUTING.md) covers the layout, the validation gate, and the rules a skill in here has
-to follow.
+[CONTRIBUTING.md](CONTRIBUTING.md) covers the layout, the validation gate, and the rules a skill
+in here has to follow.
 
 ## Status
 
-Early. Ten skills so far; more coming, and existing ones will keep changing.
+Early. Ten skills so far, and the existing ones will keep changing.
