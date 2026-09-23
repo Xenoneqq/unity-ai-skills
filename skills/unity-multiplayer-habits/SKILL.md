@@ -4,7 +4,8 @@ description: >
   Build multiplayer correctly in a Unity project using Mirror: let the server own game state and
   the client own its own movement, pick the right direction for every remote call, re-validate
   anything a client sends, register spawnable prefabs so they actually appear, branch on the
-  right identity flag, and never call it done without two clients agreeing. Use when: adding or
+  right identity flag, and never call it done without two clients agreeing. Settles which
+  networking framework a project uses before any networked code exists. Use when: adding or
   changing networked behaviour, "sync this across clients", "why does this only work for the
   host", "it works in the editor but the other player sees nothing", "my prefab doesn't spawn
   for clients", `[Command]`, `[ClientRpc]`, `[SyncVar]`, `NetworkBehaviour`, Mirror, "test with
@@ -29,6 +30,47 @@ already chose otherwise, that choice wins.
 
 Correctness first, because these bugs are the expensive kind. They reproduce only with two
 clients and they fail *silently* — no exception, no warning, just two screens that disagree.
+
+## 0. Before any of this: which framework
+
+**If the project already networks, that decision is made.** Follow it. Never introduce a second
+networking stack alongside an existing one — they fight over the same lifecycle and nothing
+survives the merge.
+
+```bash
+ls -d "$ROOT/Assets/Mirror" 2>/dev/null                       # Mirror, vendored under Assets
+grep -n 'netcode.gameobjects' "$ROOT/Packages/manifest.json"  # Netcode for GameObjects
+grep -rl 'NetworkBehaviour' "$ROOT/Assets" --include='*.cs' | head
+```
+
+**Only when nothing is networked yet is this a question — and it is the user's to answer.** Work
+out what is actually available first, then ask; do not present an option the project cannot use.
+
+Netcode for GameObjects needs **Unity 2021.3 or later**. Read the editor version from
+`ProjectSettings/ProjectVersion.txt` before asking:
+
+| Project editor | What to offer |
+|---|---|
+| 2021.3 or newer | Both. A real choice — ask. |
+| 2020.3 or older | Mirror. NGO installs only from a git URL there, which is not a footing to start a project on. |
+| Unity 6000.3+ | Both, but NGO must be 2.x — 1.x is not supported there. |
+
+Frame the question so the user can actually decide, and do not pick for them:
+
+- **Netcode for GameObjects** is Unity's own, installed from the Package Manager
+  (`com.unity.netcode.gameobjects`), and lines up with Unity's other multiplayer services.
+- **Mirror** is third-party, vendored into `Assets/`, older and heavily used, with a large body
+  of community answers behind it.
+
+Neither is the right answer in general. What matters is that one gets chosen deliberately, before
+any networked code exists, rather than arrived at by accident.
+
+**The rest of this skill is written for Mirror.** The principles below — server owns state, the
+client owns its own body, validate on the server, register what you spawn, test with two clients —
+hold for either. The API does not: NGO's equivalents are `NetworkBehaviour` with `[Rpc]`,
+`NetworkVariable`, and `NetworkObject`, and the details differ enough that you must check its docs
+rather than translating Mirror calls by name. If the project picks NGO, say plainly which parts of
+this skill you are applying as principle rather than as API.
 
 ## 1. Read the project before writing anything
 
@@ -152,8 +194,8 @@ clear any static you set in the matching `OnStop*`.
   default, meaning every send tick.
 - **Use `syncMode = SyncMode.Owner`** for state only the owner needs, so it is not broadcast.
 - **No NetworkTransform on things that never move.** Sync the spawn pose once instead.
-- **Interest management exists** for large worlds, under `Assets/Mirror/Components`. It changes
-  global behaviour, so raise it rather than switching it on.
+- **Interest management exists** for large worlds. It changes global behaviour, so raise it
+  rather than switching it on.
 
 ## 7. Test with two clients, every time
 
