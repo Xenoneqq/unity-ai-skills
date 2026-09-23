@@ -27,10 +27,29 @@ the task is a quick fix, do it directly and follow the rules below anyway.
 
 | Work | Skill |
 |---|---|
-| Anything touching a scene, a prefab, an asset, or the Unity CLI | `unity-scene-habits` |
-| A backlog, a list of tasks, or anything worth delegating | `unity-manage-work` |
-| One task carried end to end | `unity-agent-worker` |
+| A scene, a prefab, an asset, or driving the editor | `unity-scene-habits` |
+| Writing or changing C# under `Assets/` | `unity-coding-habits` |
+| Anything networked | `unity-multiplayer-habits` |
 | Where a new file or asset belongs | `unity-file-structure-habits`, against [STRUCTURE.md](STRUCTURE.md) |
+| A backlog, a list of tasks, anything worth delegating | `unity-manage-work` |
+| One task carried end to end | `unity-agent-worker` |
+| Reviewing a change, a branch or a PR | `unity-review-change` |
+| The game runs wrong — crash, exception, stutter | `unity-debug-runtime` |
+| Bringing old code onto current conventions | `unity-legacy-migration` |
+
+Drop any row whose skill this project will not use, and add a row when a new one lands. A row
+pointing at a skill nobody has installed sends the reader nowhere.
+
+## Driving the editor
+
+<Which path this project is on, so nobody has to rediscover it:>
+
+- **Unity CLI** — `unity` on `PATH`, or not installed. It resolves editors, licences and builds.
+- **Editor 6.0+ with the Pipeline package** → C# runs against a *running* editor via
+  `unity command eval`, with no recompile. Otherwise it is `-batchmode -executeMethod`, which
+  needs the editor closed. `unity-scene-habits` has both paths; say here which one applies.
+- **Tests** — whether this project has any at all. It decides how far verification can go and
+  what a report is allowed to claim.
 
 ## Hard rules
 

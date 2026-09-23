@@ -4,10 +4,10 @@ description: >
   Prefab-first habits for working in a Unity project through the editor CLI: turn anything
   groupable into a prefab, make changes as prefab-asset edits instead of scene edits, keep the
   scene out of the diff unless the task genuinely needs it, never break an asset reference, and
-  say so at the end when another branch already edits the same scene. Use when working inside a
-  Unity project, "add this to the scene", "make this a prefab", "why does my scene keep
-  conflicting", "run Unity headless", "-executeMethod", "/unity-scene-habits", or any change
-  that would touch a `.unity`, `.prefab` or `.meta` file.
+  say so at the end when another branch already edits the same scene. Use when the work touches a
+  scene, a prefab, an asset or the editor itself: "add this to the scene", "make this a prefab",
+  "why does my scene keep conflicting", "run Unity headless", "-executeMethod",
+  "/unity-scene-habits", or any change that would touch a `.unity`, `.prefab` or `.meta` file.
 ---
 
 # Unity scene habits
