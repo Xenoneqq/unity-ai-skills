@@ -1,4 +1,4 @@
-# unity-ai-skills
+# Unity AI Skills
 
 A Claude Code plugin for making games in Unity. It covers writing C# that fits the engine,
 keeping the project layout sane as it grows, and the parts of the job that happen in the editor.
@@ -24,27 +24,27 @@ copies nothing. Commit that file and everyone who clones the repo gets the plugi
 
 Four cover the craft of working in Unity.
 
-| Skill | What it does |
-|---|---|
-| `unity-scene-habits` | Prefab-first work through the editor CLI. Keeps the scene out of your diff. |
-| `unity-coding-habits` | Everyday C# habits that hold in any project. |
-| `unity-multiplayer-habits` | Multiplayer with Mirror, starting with which framework the project uses. |
-| `unity-file-structure-habits` | Where a new file or asset belongs, and keeping the layout from drifting. |
+| Skill                         | What it does                                                                |
+| ----------------------------- | --------------------------------------------------------------------------- |
+| `unity-scene-habits`          | Prefab-first work through the editor CLI. Keeps the scene out of your diff. |
+| `unity-coding-habits`         | Everyday C# habits that hold in any project.                                |
+| `unity-multiplayer-habits`    | Multiplayer with Mirror, starting with which framework the project uses.    |
+| `unity-file-structure-habits` | Where a new file or asset belongs, and keeping the layout from drifting.    |
 
 Three run the work.
 
-| Skill | What it does |
-|---|---|
-| `unity-skill-package-setup` | Wires a project up to these skills. Run it once. |
-| `unity-manage-work` | Plans a backlog around scene conflicts and delegates it. Never pushes. |
-| `unity-agent-worker` | Carries one task end to end, verifying as it goes. |
+| Skill                       | What it does                                                           |
+| --------------------------- | ---------------------------------------------------------------------- |
+| `unity-skill-package-setup` | Wires a project up to these skills. Run it once.                       |
+| `unity-manage-work`         | Plans a backlog around scene conflicts and delegates it. Never pushes. |
+| `unity-agent-worker`        | Carries one task end to end, verifying as it goes.                     |
 
 Three check and repair.
 
-| Skill | What it does |
-|---|---|
-| `unity-review-change` | Reviews a diff, a branch or a PR. Read-only. |
-| `unity-debug-runtime` | Works out why a running game is wrong when no test will tell you. |
+| Skill                    | What it does                                                         |
+| ------------------------ | -------------------------------------------------------------------- |
+| `unity-review-change`    | Reviews a diff, a branch or a PR. Read-only.                         |
+| `unity-debug-runtime`    | Works out why a running game is wrong when no test will tell you.    |
 | `unity-legacy-migration` | Moves old code onto current conventions without breaking references. |
 
 ## How they fit
