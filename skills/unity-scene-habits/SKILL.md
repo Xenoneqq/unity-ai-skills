@@ -42,6 +42,7 @@ if command -v unity >/dev/null; then
   unity editors -i --verbose --json --no-banner   # installed editors, with locations
   unity license --json --no-banner                # data: [] means no licence
   unity pipeline list --json --no-banner          # which editors are running
+  unity status --json --no-banner                 # which of them are connected and ready
 else
   echo "no unity CLI — batch mode only"
 fi
@@ -58,6 +59,24 @@ negotiable and no amount of CLI version will move it.
 Prefer the connected path when it is available. Batch mode pays an editor boot and a script
 recompile per change; the connected path answers in milliseconds against the already-loaded
 project.
+
+With Pipeline installed but no editor open, do not open one on your own: it takes a window and
+the user's focus. Ask the user once whether to (a manager asks at kickoff). If the editor closes
+mid-session, carry on in batch mode without asking again. Never open the editor while a batch
+job is running; it takes the project lock and the job fails.
+
+**Confirm the editor is reachable before any connected work.** `unity status --json` should list
+this project in state `ready`. Two things make a running editor look absent, and neither means
+"fall back to batch mode" or "edit the files by hand":
+
+- **Safe Mode.** A project with compile errors opens in Safe Mode, where no package loads,
+  Pipeline included. `unity pipeline list` reports it. Fix the compile errors in the C# source,
+  then ask the user to restart the editor.
+- **Your own sandbox.** A sandboxed shell can be blocked from seeing the editor's discovery file
+  or its local port, and gets the same "no editor" answer. If the user may have one open, ask.
+  Never suggest turning the sandbox off; suggest running the one blocked command outside it.
+
+[references/connected-editor.md](references/connected-editor.md) has how to tell these apart.
 
 Without the Unity CLI, resolve the editor binary by hand:
 
@@ -157,6 +176,11 @@ between runs. Creating and deleting it each time forces two full script recompil
 [references/batch-mode.md](references/batch-mode.md) has the scaffold, the flag list, the
 licensing failure and how to read the log.
 
+Code that generates assets the project commits is not throwaway, so it does not live there. It
+goes in committed builders that rerun without changing anything;
+[references/builders.md](references/builders.md) has the rules, the changes the editor makes on
+its own, and when a setting needs a test instead of a convention.
+
 Edit prefab assets directly — never by dragging an instance into a scene and applying overrides.
 `PrefabUtility.EditPrefabContentsScope` opens a prefab asset, lets you change it, and saves it,
 with no scene involved and no scene diff.
@@ -167,9 +191,15 @@ overrides, and moving assets safely.
 Never do these:
 
 - Hand-edit `.unity`, `.prefab` or `.meta` files.
+- Add, remove or upgrade a package by editing `Packages/manifest.json`. Ask first, then go
+  through `UnityEditor.PackageManager.Client`, which resolves dependencies. It is asynchronous,
+  which breaks the usual batch-mode run; [references/batch-mode.md](references/batch-mode.md)
+  has the pattern.
 - `PrefabUtility.UnpackPrefabInstance` — it destroys the link the whole habit depends on.
 - Delete `Library/` to fix something. It costs a full reimport and fixes almost nothing.
 - Run batch mode against a project an editor has open.
+- Modify, restore, check out or delete a `.unity` or `.prefab` on disk while the user's editor
+  has it open. It raises a modal dialog that blocks the editor until someone clicks it.
 
 ## 4. Keep references intact
 
@@ -210,6 +240,9 @@ Unity's, so capture it before piping.
 
 **The change is actually in the asset.** Reopen it and assert, in the task script or a second
 run. A `SaveAsPrefabAsset` that silently no-ops looks identical to one that worked.
+
+**It looks right, if it is visual.** Render it to a PNG in a PlayMode test and open the PNG;
+[references/visual-checks.md](references/visual-checks.md) has the recipe.
 
 **Every asset has its meta, and every meta its asset:**
 

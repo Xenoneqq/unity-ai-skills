@@ -77,6 +77,7 @@ there between runs.
 // Assets/Editor/CliTasks/CliTask.cs
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public static class CliTask
 {
@@ -84,21 +85,39 @@ public static class CliTask
     {
         try
         {
+            for (var i = 0; i < SceneManager.sceneCount; i++)
+                if (SceneManager.GetSceneAt(i).isDirty)
+                    throw new System.InvalidOperationException("An open scene has unsaved changes.");
+
             // work goes here
             AssetDatabase.SaveAssets();
-            EditorApplication.Exit(0);
+            Exit(0);
         }
         catch (System.Exception e)
         {
             Debug.LogError($"CliTask failed: {e}");
-            EditorApplication.Exit(1);
+            Exit(1);
+            throw;
         }
+    }
+
+    static void Exit(int code)
+    {
+        if (Application.isBatchMode) EditorApplication.Exit(code);
     }
 }
 ```
 
 Always exit explicitly. An uncaught exception exits 1, but a method that just returns leaves the
 exit code to `-quit`, which reports success even after logged errors.
+
+The same method may later run through the connected path, inside the user's editor. Three
+details make that safe:
+
+- **The `isBatchMode` guard.** An unguarded `EditorApplication.Exit` would close the user's editor
+  and their unsaved work with it.
+- **The rethrow.** With no exit to carry the failure, the exception is how the caller sees it.
+- **The dirty-scene check.** A task that opens a scene over unsaved edits discards them.
 
 To pass arguments, read `System.Environment.GetCommandLineArgs()` and put your own flags after
 the Unity ones.
@@ -117,6 +136,64 @@ Assets/Editor/CliTasks.meta
 Ignore the folder's own `.meta` alongside it, or git offers you a meta for an ignored directory.
 If the project already has an editor-tools folder of its own, put the task there and follow its
 naming.
+
+The ignored runner is only for throwaway work. Code that generates assets the project commits
+must be committed with them, or nobody can regenerate those assets from a fresh clone. Keep it in
+committed builders that the runner calls; [builders.md](builders.md) has the rules.
+
+## Installing a package
+
+Ask first: a package is a dependency decision for the whole project. Then never edit
+`Packages/manifest.json` by hand; `UnityEditor.PackageManager.Client` resolves dependencies and
+compatible versions, and a hand edit routinely breaks resolution.
+
+`Client.Add` is asynchronous. The request completes on later editor ticks, so a run with `-quit`
+exits the moment the method returns, before anything is installed, and a busy-wait on
+`IsCompleted` deadlocks the editor. Run this one **without `-quit`**, poll on
+`EditorApplication.update`, and exit yourself:
+
+```csharp
+// Assets/Editor/CliTasks/PackageTask.cs
+using UnityEditor;
+using UnityEditor.PackageManager;
+using UnityEditor.PackageManager.Requests;
+using UnityEngine;
+
+public static class PackageTask
+{
+    static AddRequest request;
+
+    public static void Add()
+    {
+        var args = System.Environment.GetCommandLineArgs();
+        var id = args[System.Array.IndexOf(args, "-package") + 1];
+        request = Client.Add(id);
+        EditorApplication.update += Poll;
+    }
+
+    static void Poll()
+    {
+        if (!request.IsCompleted) return;
+        EditorApplication.update -= Poll;
+        if (request.Status == StatusCode.Success)
+        {
+            EditorApplication.Exit(0);
+            return;
+        }
+        Debug.LogError($"PackageTask failed: {request.Error.message}");
+        EditorApplication.Exit(1);
+    }
+}
+```
+
+```bash
+"$UNITY" -batchmode -nographics -projectPath "$ROOT" \
+  -executeMethod PackageTask.Add -package com.unity.inputsystem -logFile - > /tmp/unity.log 2>&1
+echo "exit $?"; git diff -- "$ROOT/Packages/manifest.json"
+```
+
+The manifest diff is the check. The Pipeline package is the one exception: `unity pipeline
+install` adds it for you.
 
 ## Reading the run
 
@@ -153,5 +230,9 @@ Same binary, different verb. Do not combine it with `-executeMethod`.
 
 `-testPlatform` takes `EditMode`, `PlayMode`, or a build target name. `-testFilter`,
 `-testCategory` and `-assemblyNames` all take semicolon-separated lists. Results are NUnit XML;
-read the `<test-run>` attributes for the totals rather than scrolling the log. PlayMode tests
-render, so drop `-nographics` for those.
+read the `<test-run>` attributes for the totals rather than scrolling the log, and
+`<test-case result="Failed">` for the failing names. PlayMode tests render, so drop
+`-nographics` for those.
+
+Leave out `-quit`. The test runner exits on its own when the run ends, and `-quit` can close the
+editor before the tests start.
