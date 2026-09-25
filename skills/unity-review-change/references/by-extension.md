@@ -46,6 +46,9 @@ spawnable prefab that is not registered anywhere.
   and the answer goes in the report either way.
 - **Components inlined into the scene** that the census shows are not backed by a prefab — the
   thing the prefab-first habit exists to prevent.
+- **A model placed raw.** An instance whose source is an `.fbx`, `.blend` or `.obj` rather than a
+  `.prefab`. Per `unity-scene-habits`, every model is wrapped in its own prefab with its collision
+  before it goes into the game. Logic on it is only right when asked for or needed by the game.
 
 ## `.prefab`
 
