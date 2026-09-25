@@ -15,6 +15,8 @@ skill the project will not use.
 
 Unity <version>. The Unity project is at `<path>` — the repo root is one level above it.
 Where things go is recorded in [STRUCTURE.md](STRUCTURE.md); read it before creating an asset.
+How the game's systems fit together is in `Docs/GameStructure.md` once it exists; read it before
+changing a system, and update it when you add a system, event, builder or scene.
 
 ## When the user hands over a task
 
@@ -28,8 +30,11 @@ the task is a quick fix, do it directly and follow the rules below anyway.
 | Work | Skill |
 |---|---|
 | A scene, a prefab, an asset, or driving the editor | `unity-scene-habits` |
-| Writing or changing C# under `Assets/` | `unity-coding-habits` |
+| Writing or changing C# under `Assets/`, tests included | `unity-coding-habits` |
 | Anything networked | `unity-multiplayer-habits` |
+| Designing or restyling a HUD, menu or any in-game screen | `unity-ui-design` |
+| Designing, blocking out or dressing a level | `unity-level-design` |
+| Generated textures, sprites or icons, or blurry pixel art | `unity-pixel-art` |
 | Where a new file or asset belongs | `unity-file-structure-habits`, against [STRUCTURE.md](STRUCTURE.md) |
 | A backlog, a list of tasks, anything worth delegating | `unity-manage-work` |
 | One task carried end to end | `unity-agent-worker` |
@@ -48,8 +53,13 @@ pointing at a skill nobody has installed sends the reader nowhere.
 - **Editor 6.0+ with the Pipeline package** → C# runs against a *running* editor via
   `unity command eval`, with no recompile. Otherwise it is `-batchmode -executeMethod`, which
   needs the editor closed. `unity-scene-habits` has both paths; say here which one applies.
+- **The user's editor while agents work** — on the connected path it is look-only while a task
+  runs: no saving scenes or prefabs, no Play mode. Never change a scene or prefab on disk that
+  the editor has open.
 - **Tests** — whether this project has any at all. It decides how far verification can go and
   what a report is allowed to claim.
+- **Packages settled at setup** — Pipeline and ProBuilder: installed, already there, or declined.
+  A declined package is not offered again.
 
 ## Hard rules
 
@@ -59,10 +69,13 @@ pointing at a skill nobody has installed sends the reader nowhere.
 - **Every asset is committed with its `.meta`.** An asset without its meta gives everyone else a
   fresh GUID and silently breaks every reference to it.
 - **Never move or rename an asset with `mv` or `git mv`** — use `AssetDatabase.MoveAsset`.
+- **Generated assets come from committed builders** in `<builders folder>`. Change the builder
+  and rerun it, never the output.
 - **Never push, never open a PR** without being asked.
 
 <Anything else true of this project: naming, assembly definitions, the render pipeline,
-multiplayer constraints, which scenes are contested.>
+multiplayer constraints, which scenes are contested, the art style's import rules (filtering,
+pixels per unit).>
 ````
 
 ## AGENTS.md
