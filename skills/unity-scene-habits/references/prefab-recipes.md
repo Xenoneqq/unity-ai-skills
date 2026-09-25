@@ -75,6 +75,57 @@ Name the asset for the thing, not for the scene it came from, and put it where t
 already keeps that kind of prefab — `unity-file-structure-habits` decides that, and a prefab that
 lands in the wrong folder is a move through `AssetDatabase` later, not a drag.
 
+## Wrap an imported model in a prefab
+
+Every model gets its own prefab before it goes into the game. The prefab root is an empty
+GameObject named for the thing; the model sits under it as a child; collision, and logic when
+there is any, go on the root. The model asset itself stays untouched, so a re-export from the artist updates every
+copy without wiping the collider or the scripts.
+
+```csharp
+var model = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Models/Barrel.fbx");
+var root = new GameObject("Barrel");
+try
+{
+    var visual = (GameObject)PrefabUtility.InstantiatePrefab(model, root.transform);
+    visual.name = "Model";
+
+    var renderers = root.GetComponentsInChildren<Renderer>();
+    var bounds = renderers[0].bounds;
+    foreach (var r in renderers) bounds.Encapsulate(r.bounds);
+    var box = root.AddComponent<BoxCollider>();
+    box.center = bounds.center - root.transform.position;
+    box.size = bounds.size;
+
+    root.AddComponent<Barrel>();   // only when asked for or the game needs it
+
+    PrefabUtility.SaveAsPrefabAsset(root, "Assets/Prefabs/Props/Barrel.prefab");
+}
+finally { Object.DestroyImmediate(root); }
+```
+
+Use `InstantiatePrefab`, not `Instantiate`: it keeps the child linked to the model asset, which
+is what makes re-exports flow through.
+
+Pick the collider for how the thing is used, not what is easiest:
+
+- **Primitives first.** A box, sphere or capsule, or a few of them on child objects, covers most
+  props and is the cheapest to simulate.
+- **`MeshCollider` for static scenery** whose shape matters, like terrain pieces or walls with
+  openings. Mark it `convex` if it ever needs a `Rigidbody`; a non-convex mesh collider cannot
+  move.
+- **No collider** only when nothing can touch it, such as distant background dressing. Say so
+  when reporting, so it reads as a choice and not a miss.
+
+Avoid the model importer's **Generate Colliders** option. It puts a full mesh collider on every
+mesh in the file and lives on the model asset, where nobody looks for it.
+
+Logic is not part of the default wrap. Add it when the user asks for it, or when the game needs
+it to work, like a pickup that has to be collected or a door that has to open. It goes on the
+prefab root as a component. A plain prop stays a model plus a collider; do not invent behaviour
+for it. A model that needs different behaviour in two places gets a
+[variant](#make-a-variant-instead-of-a-copy) of this prefab, not a second wrapper.
+
 ## Make a variant instead of a copy
 
 When two things differ by a few values, a variant keeps them in sync for everything else.

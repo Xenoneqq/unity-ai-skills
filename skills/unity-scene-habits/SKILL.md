@@ -120,6 +120,14 @@ is the bug — fix it by prefabizing, not by editing the scene around it.
 | Managers | a GameObject that carries nothing but logic scripts |
 | The player | the rig, its camera, its input, as one prefab |
 | UI | screens, panels, reusable widgets, list rows |
+| Imported models | an `.fbx`, `.blend` or `.obj` on its way into the game |
+
+**A model never goes into the game raw.** Before an imported model is placed in a scene or
+referenced by code, wrap it in its own prefab: the model as a child, the collision it needs on
+the prefab. Logic goes on the prefab root only when the user asks for it or the game clearly
+needs it, like a door that has to open; do not invent behaviour for a prop. A raw model has no
+collider, cannot carry scripts in a way that survives a re-export, and every placed copy has to
+be fixed by hand. The recipe is in [references/prefab-recipes.md](references/prefab-recipes.md).
 
 ### What genuinely needs the scene
 
