@@ -7,13 +7,21 @@ A Unity project can be held by **one editor at a time**, and a cold import costs
 editor-backed work does not live inside workers — it goes to one shared agent that owns the
 editor for the session.
 
-## Spawn it lazily and exactly once
+## Spawn it lazily, address it by id
 
-Spawn on the first request, never a second time. Later requests route to the same agent via
-`SendMessage`, which keeps its queue and its warm project. Give its name to every worker that
-needs it, and to later workers in their initial prompt.
+Spawn on the first request, never a second time while it still answers. It is a resumable agent,
+not a running one: it finishes after every job and wakes when someone sends it a message. Later
+requests route to it via `SendMessage`, which resumes it with its queue and notes intact. Give
+its name to every worker that needs it, and to later workers in their initial prompt.
 
-Keep it alive to the end of the session. A respawn loses the queue and may pay another import.
+Keep two things in `session-materials/` so replacing it is one edit:
+
+- **Its spawn prompt**, in `editor-agent-prompt.md`, so a respawn is identical.
+- **Its current id, in one place** that workers read it from, so a respawn changes one line
+  rather than every brief.
+
+After a pause or a restart the old id is gone, and stopping it reports no such task. Respawn from
+the stored prompt, update the id, and make its first job an import check.
 
 ## Run it on a weak model
 
@@ -23,7 +31,10 @@ project's notes, check `unity-scene-habits` for the CLI surface, look for an exi
 and bake the result into its prompt as a copy-paste runbook:
 
 - **Which path the project is on**: the connected editor (Unity 6.0+, Pipeline installed) or
-  batch mode. They are driven completely differently, and the agent must not have to choose.
+  batch mode. They are driven completely differently, so give the agent both recipes and a
+  mechanical rule, not a judgement call: connected when `unity pipeline list` shows this project
+  reachable, batch when no editor holds the project. A connected command that exits 6 or times
+  out is retried in batch only if no editor holds the project; otherwise it is reported.
 - **The editor binary or the CLI invocation**, exact, with the project path.
 - **The exact command per job** — tests, play-mode smoke, build, import check — copy-paste ready.
   A build is minutes; say so, and say it is per task rather than per milestone.
@@ -33,7 +44,9 @@ and bake the result into its prompt as a copy-paste runbook:
 - **How long each normally takes**, and the timeout past which to give up. Say plainly that a
   first run against a cold `Library/` reimports the whole project and can take many minutes
   while looking identical to a hang.
-- **How to read the result**: which line means pass, where the report or log lands.
+- **How to read the result**: which line means pass, where the report or log lands. For batch
+  tests: totals from the `<test-run>` attributes of the results XML, failing names from
+  `<test-case result="Failed">`.
 - Anything known-flaky, and whether one retry is allowed. Be explicit, or it will retry forever
   or give up too early.
 
@@ -62,11 +75,25 @@ either chases breakage it did not cause or excuses breakage it did.
 - **One job at a time, FIFO.** The project can be held by one editor; there is no concurrency to
   exploit. Do not start a second run because the first is slow.
 - A request carries: requesting agent, branch, exactly what to run, pass criteria.
+- **Every message is a new request** unless it quotes a job number. A pending notification
+  about an earlier job answers nothing new; never let it stand in for a reply. Acknowledge each
+  request with the log number you will write, so the requester can match your reply to it.
+- **Wait on the job, never on a search.** Start the editor with Bash `run_in_background` and act
+  on its completion notification, or capture `$!` and wait on that PID. Never poll with
+  `pgrep -f` or `ps | grep` on a pattern that also appears in your own command: it matches the
+  loop itself, which then never exits. No loop outlives its job.
+- **On the connected path, run only connected-safe methods.** A method that may call
+  `EditorApplication.Exit` without an `Application.isBatchMode` guard closes the user's editor
+  and their unsaved work. If you cannot tell, report back instead of running it.
+- **Timeouts plus an idle editor mean a dialog.** If requests time out on the editor's main
+  thread while its CPU sits idle and its log is quiet, a modal dialog is waiting for a click.
+  Stop retrying and tell the manager the user needs to look at the editor.
 - **Never open the project in a different editor version than the project's own.** That upgrade
   is irreversible. If the version is missing, report it rather than substituting.
 - **Never close or kill an editor you did not start**, and never `unity close` — it exits without
   saving and may be the user's own session.
-- On finish, reply to the requester with PASS/FAIL, failing test or error names, the relevant log
+- On finish, reply to the sender of the request (a worker cannot know its own id, so never wait
+  to be given one) with PASS/FAIL, failing test or error names, the relevant log
   excerpt, and the path to the full log under
   `session-materials/editor-logs/<branch>-<n>.log`.
 - Report queue state to the manager when it changes materially — depth, long waits, an import

@@ -6,6 +6,9 @@ Agent tool, `subagent_type: "general-purpose"`, model from Step 4, and **no `iso
 worker works in the user's own checkout on the branch you already cut. There is no worktree and
 no second copy, which is why only one writer runs at a time.
 
+Write it as two files, a common brief and a task brief, and keep the prompt itself short;
+[brief-templates.md](brief-templates.md) has both templates.
+
 ## Open with the skill
 
 Tell it to invoke `unity-agent-worker` and follow it for the whole task. That skill already
@@ -30,7 +33,9 @@ supplies what it cannot know and pre-answers what it would otherwise stop on.
   smoke-tested in play mode, is a build affordable per task. The worker must not have to discover
   this. Say explicitly that it reports the rung it reached and never claims "verified".
 - **That a manual checklist is required** whenever nothing automated proves the behaviour, and
-  that the task is not done until a person confirms it.
+  that the task is not done until a person confirms it. Under unattended mode (Step 6b) say
+  instead that every deliverable needs a test that fails if the behaviour breaks, driven through
+  test seams and deterministic (`unity-coding-habits`, `references/testing.md`).
 - **Which scenes and prefabs this task is allowed to touch**, and which it must not. This is the
   conflict map, handed down. If it needs something outside that set, it reports rather than
   spreading.
@@ -43,18 +48,29 @@ supplies what it cannot know and pre-answers what it would otherwise stop on.
 - KISS: the smallest diff that fully solves the task; do not delete comments or code the task
   does not require touching.
 - "Report back: the branch, every file created or edited with full paths, the scenes and prefabs
-  you touched and why, verification results with output, and anything you deviated from,
-  discovered or left undone."
+  you touched and why, verification results with output, anything you deviated from,
+  discovered or left undone, and a Tooling / skill friction list: anything in the skills that
+  was missing, wrong or awkward."
+- **How memory-driven preferences are handled.** Subagents inherit the user's auto-memory. Where
+  a memory asks for something this brief forbids, such as writing into `session-materials/`,
+  the brief wins and the worker puts it in its report instead.
 
 ## Shared-checkout rules, verbatim
 
 - You are working in the user's own checkout. There is no worktree and no isolated copy, so
   there is nothing to recover from if you destroy something.
+- **Anything visual ships with a screenshot test** (`unity-scene-habits`,
+  `references/visual-checks.md`). Write the PNGs to `session-materials/screenshots/task<N>/`, the
+  one place in `session-materials/` you may write. The manager opens every one.
 - **Stay on the branch named in this brief.** Do not create, rename, switch or delete a branch.
 - **Never `git stash`, `reset --hard`, `checkout --force`, or delete a branch.**
 - If the working tree has changes you did not make, **stop and report it**. Do not build on
   someone else's uncommitted work.
-- Leave `session-materials/` alone; it is not yours.
+- Leave `session-materials/` alone apart from `screenshots/`; it is not yours.
+- **When a command's output decides something**, such as a grep that finds nothing or a count,
+  put anything beyond a one-liner in a script file and send the output to a file before reading
+  it. Shell hooks can rewrite commands and trim their output, and a missed match looks exactly
+  like a clean result.
 - Commit **rarely**, only a coherent finished chunk, and **never on a red gate**.
 - **A pure move lands first** — a rename, a file split, or converting loose scene objects into
   prefabs is its own first commit with no behaviour change. New behaviour comes after.
@@ -74,4 +90,5 @@ an import is expensive. Never drive the editor yourself.
    request below.
 3. Send it: the branch, exactly what to run, and what counts as pass.
 4. **One outstanding request at a time.** Wait for the verdict; keep working on anything that
-   does not depend on it.
+   does not depend on it. To wait, end your turn: the reply resumes you. Never sleep in a loop
+   or poll the editor agent's output.

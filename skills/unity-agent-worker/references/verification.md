@@ -63,6 +63,12 @@ Three things make this usable rather than noise, and all three matter:
 - **It needs a warm `Library/`.** On a cold checkout `PackageCache` does not exist yet and every
   package reference looks broken.
 
+Some references resolve to packages that ship inside the editor rather than in `PackageCache`,
+so even an untouched render-pipeline template can list a handful, typically from its renderer
+and volume profile assets. Add the editor's built-in packages folder to the declared set if you
+can find it, and otherwise leave them to the baseline. Keep `.mixer` files out of the scanned
+set: their exposed-parameter GUIDs are not asset references.
+
 Treat the result as **candidates to check, not a verdict** — a handful of editor-internal
 references can still show up. Run it on the base branch too, and only the new ones are yours.
 

@@ -100,6 +100,13 @@ Project-wide, and the diff is usually smaller than the consequence.
 | `GraphicsSettings.asset`, `QualitySettings.asset` | Render pipeline and quality tiers — global, and a common accident. |
 | `ProjectSettings.asset` | Bundle id, company, versions, platform settings. Check nothing personal landed here. |
 
+Some changes here come from the editor, not the author: a newly generated settings file on first
+open, a `serializedVersion` bump and trimmed empty slots in `TagManager.asset` after adding a
+layer, graphics and player settings re-serialized by the first player build, and materials
+re-saved when the editor syncs their properties. Check that is all the file contains, then treat
+it as housekeeping rather than a finding. `unity-scene-habits`' `references/builders.md` has the
+list.
+
 ## `Packages/manifest.json`, `Packages/packages-lock.json`
 
 A dependency decision, not an implementation detail. Check the package was actually agreed, that

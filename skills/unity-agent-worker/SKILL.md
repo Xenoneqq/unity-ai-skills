@@ -64,7 +64,8 @@ is expensive. Never drive it yourself:
    request below. The manager spawns it and hands you its name.
 3. Send it: the branch, exactly what to run, and what counts as pass.
 4. **One outstanding request at a time.** Wait for the verdict before sending another, and keep
-   working on anything that does not depend on it.
+   working on anything that does not depend on it. To wait, end your turn: the reply resumes
+   you. Never sleep in a loop or poll the editor agent's output.
 
 ## 5. Verify — as far as the project allows
 

@@ -40,14 +40,17 @@ deliverable; the user opens the PRs.
 2. **Token & time accounting** — per agent, then session totals. Say plainly which were
    unavailable.
 3. **Implementations** — per task: what it covers, **the verification rung it reached and what
-   remains unproven**, who signed it off, and for any **PARTIAL**: what landed, what did not, the
-   blocker, the suggested next step.
+   remains unproven**, who signed it off (or that nobody did, under unattended mode), and for any
+   **PARTIAL**: what landed, what did not, the blocker, the suggested next step. Under unattended
+   mode, list anything about feel (movement, weapon feel, difficulty) as unproven and needing a
+   person, whatever the tests say.
    State once, up front, whether this project has automated tests at all. A reader who assumes it
    does will misread every line under this heading.
 4. **Decisions you made on the user's behalf** — the ones that shape the result, so they can be
    overruled.
 5. **Workflow improvements** — what to change next run: mis-ordered tasks, wrong model tier,
-   missing anchor files, conflicts you did not predict.
+   missing anchor files, conflicts you did not predict. Include the workers' "Tooling / skill
+   friction" lists, triaged: what was missing, wrong or awkward in the skills themselves.
 6. **Draft PRs** — path to each file.
 
 ## What the report is for
@@ -58,3 +61,26 @@ on my behalf. Sections 1, 0 and 4 answer those; everything else is supporting de
 
 Write it as you go, not at the end. A report assembled from memory after the last task is the one
 that quietly drops a blocker.
+
+---
+
+## Pausing and resuming
+
+A long session will be paused: the user steps away, a usage limit hits, or you hand over to a
+fresh manager session to keep the context small. Background agents do not survive that, so
+leave everything a new session needs on disk.
+
+1. **Stop the writer.** Then check `git status` and report what it left uncommitted. Never stash
+   it or clean it up; the user decides.
+2. **Write `session-materials/RESUME.md`**: HEAD, the tasks accepted so far, the task in progress
+   and which brief to respawn its worker from, the editor path in use (connected or batch, editor
+   open or closed), and a note that the editor agent must be respawned.
+3. **On resume**, respawn the editor agent from `editor-agent-prompt.md`, put its new id in
+   `brief-common.md`, and make its first job an import check. Ask the editor question from Step 0
+   again, since the user's setup may have changed, and patch `brief-common.md` to match.
+
+### After a crash or power loss
+
+Check before building on anything: `git fsck`, then an import, the EditMode suite and the
+PlayMode suite through the editor agent, then look for Unity processes or wait loops left over
+from before the crash. Only then respawn the writer.

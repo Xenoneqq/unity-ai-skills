@@ -5,8 +5,8 @@ description: >
   one branch, plan the order from a scene-and-prefab conflict map, delegate implementation to
   worker subagents that follow `unity-agent-worker`, route all editor-backed work through one
   shared editor agent, review what comes back, and close with a report and a draft PR file per
-  task. Work happens in the user's own checkout — no worktrees — so writers run one at a time.
-  You never write game code yourself. Nothing is ever pushed. Use when: "/unity-manage-work",
+  task. Work happens in the user's own checkout — no worktree per worker — so writers run one
+  at a time. You never write game code yourself. Nothing is ever pushed. Use when: "/unity-manage-work",
   "manage this Unity work", "here is a list of Unity tasks, get them done", "delegate these to
   agents", or the user hands over Unity work and wants it delivered, not investigated.
 ---
@@ -22,7 +22,10 @@ report + draft PRs**.
 | File | Read it when |
 |---|---|
 | `references/worker-brief.md` | Spawning a worker (Step 5). Everything the prompt must carry. |
+| `references/brief-templates.md` | Writing the first brief (Step 5). The common and per-task files. |
 | `references/editor-agent.md` | Any task needs the editor (Step 5a). Runbook, queue rules, prompt. |
+| `references/structure-map.md` | The first task is accepted (Step 6). The game's structure map. |
+| `references/closing-out.md` | The first spawn, the first accepted task, and any pause. |
 
 Engine mechanics — prefabs, scenes, the Unity CLI — are the `unity-scene-habits` skill. Workers
 follow it. You do not need to re-derive it here.
@@ -31,8 +34,9 @@ follow it. You do not need to re-derive it here.
 
 ## Step 0 — One checkout, one branch, one writer
 
-This skill does **not** use worktrees. Everything happens in the user's own checkout. That is a
-deliberate trade and it sets the rules for everything below:
+This skill never gives a worker its own worktree. Everything happens in the user's own checkout,
+with the session branch checked out. That is a deliberate trade and it sets the rules for
+everything below:
 
 - **A Unity project's `Library/` is gigabytes and git-ignored.** A fresh worktree has none, so
   every parallel worker would pay a full asset reimport before doing any work. One shared
@@ -45,6 +49,9 @@ deliberate trade and it sets the rules for everything below:
   Step 0 and everything lands on it.
 - **Never `stash`, `reset --hard`, `checkout --force`, or delete a branch.** There is no
   isolated copy to fall back on. The user's working tree is the only one.
+- **One long-lived second checkout is fine** when the user wants their editor free: a viewer
+  clone the user keeps open to watch progress, or a single checkout the agents work in. It pays
+  the import once, at kickoff. What this skill avoids is an import per worker, not a second copy.
 
 Then settle the base with the user, before anything else:
 
@@ -59,9 +66,36 @@ git status --short
    by recency and naming, or Other.
 3. **The working tree must be clean before you cut the branch.** If it is dirty, show what is
    uncommitted and let the user decide. Never clean it yourself.
-4. **If an editor has the project open, say so now.** Batch-mode work will fail against a locked
-   project, and a running editor can overwrite files underneath a worker. Ask whether to close
-   it or to work through the connected-editor path.
+4. **Settle the editor.** Check whether one has the project open. Check both the lock and a
+   process, because a crashed editor can leave a stale lockfile (`ROOT` is the Unity project,
+   found as in `unity-scene-habits`):
+
+```bash
+ls "$ROOT/Temp/UnityLockfile" 2>/dev/null
+ps -Ao pid,args | grep -i '[-]projectpath' | grep -F "$ROOT"   # [-] stops grep matching itself
+```
+
+   On Windows: `Get-CimInstance Win32_Process -Filter "Name='Unity.exe'" | Where-Object
+   CommandLine -like "*$ROOT*"`.
+
+   An open editor matters for three reasons, and the user should hear them in one line each:
+   batch mode fails against the project lock; the editor reimports what workers write and can
+   save a scene or prefab over their change; and opening it re-saves assets on its own.
+
+   Then settle the path, in the same `AskUserQuestion` as the base branch:
+
+   - **Editor 6.0+ without the Pipeline package:** recommend installing it
+     (`unity-scene-habits`, connected-editor path). It is a manifest change, so the user
+     approves it, but it is the recommended option.
+   - **Pipeline available and no editor open:** ask once whether the agents should work in the
+     editor, so the user can watch, or headless in the background. Ask again on resume, never
+     per job. Never open an editor unasked.
+   - **Connected path chosen:** the editor is look-only for the user while a worker runs: no
+     saving scenes or prefabs, no Play mode.
+   - **Editor older than 6.0, or the user declines:** batch mode, with the editor closed. A viewer
+     clone (above) lets the user watch anyway.
+
+   Install the package only now or between tasks, never while a worker runs.
 5. Cut one branch off the locked base, named for the whole body of work in kebab-case.
 
 ---
@@ -72,6 +106,9 @@ git status --short
 2. Split into **discrete tasks**. One task = one deliverable = one worker = one commit range.
 3. If the user gave explicit steps, keep their order and wording. Distribute them, do not
    redesign them.
+   - **A task about how UI looks**, not only what it does ("make the UI look good", "design the
+     HUD"), goes through `unity-ui-design`: direction, style plan and a mockup the user approves
+     come before any implementation task. A function-only UI task does not need it.
 4. Resolve open decisions **now**. Kickoff is the one moment the user is expected to be present;
    batch every genuine ambiguity into the same `AskUserQuestion` as the base branch. Capture
    answers verbatim — they go into worker prompts.
@@ -113,6 +150,21 @@ Because writers are sequential, this map decides **order**, not parallelism:
 - A task that only changes C# can go anywhere.
 - A task that **converts loose scene objects into prefabs** goes first. It shrinks the scene for
   everything after it. Its own commit, per `unity-scene-habits`.
+- **A shared test scene is shared space.** If several tasks add test areas to one sandbox scene,
+  hand each its own region, the way the map hands out scenes. Better: behaviour tests build their
+  own geometry, and the shared scene holds only smoke and screenshot tests.
+
+Size and shape the tasks while you are at it:
+
+- **Split anything big.** A task likely to run past 30-40 minutes or about 100 tool calls is
+  two or three tasks. Long workers are slow to review and the most expensive thing in a session.
+- **A level or anything with progression** gets an autopilot playthrough as a deliverable: a bot
+  that finishes it through the player's own input seam (`unity-coding-habits`,
+  `references/testing.md`).
+- **Plan a playtest.** After the first end-to-end playable, plan one human playtest and a short
+  "playtest fixes" task after it. Tests check the rules as written; only a person finds that the
+  enemies all bunch up, one gunshot pulls the whole map, or a pickup does not read as what it
+  does.
 
 Run the branch scan from `unity-scene-habits` before planning, not after. If another branch
 already edits a scene on your list, that is a planning input — say it to the user at kickoff
@@ -124,15 +176,19 @@ Show the user the order before starting.
 
 ## Step 4 — Pick the model per agent
 
-| You (manager) | Worker — implementation | Worker — small/mechanical | Research / review | Editor agent |
-|---|---|---|---|---|
-| Fable 5 | Opus 5 | Opus 5 | Opus 5 | Sonnet |
-| Opus 5 | Opus 5 | Opus 4.8 | Sonnet | Sonnet |
+Name tiers, not versions; models change faster than this file.
+
+| Role | Tier |
+|---|---|
+| Worker, implementation | The strongest model a worker can run, never above your own tier. |
+| Worker, small or mechanical | Same, or one tier below. |
+| Research and review | One tier below yours for a scoped read; your worker tier for a risky task. |
+| Editor agent | Mid tier (Sonnet class). |
 
 The editor agent runs a weak model on purpose: it executes a runbook, it does not reason about
 the project. That only works if **you** hand it exact commands (Step 5a).
 
-Running below Opus yourself → match your own tier rather than reaching upward; you review every
+Running below the top tier yourself → match your own tier rather than reaching upward; you review every
 returned task and cannot meaningfully review work from a stronger model.
 
 ---
@@ -163,6 +219,22 @@ the rest moving, and surface it under **BIG BLOCKERS** in the report.
 
 ---
 
+## Step 4b — Watch the cost
+
+A managed session can run to millions of tokens, and most of it is context: every tool call
+resends the agent's whole conversation, so long workers and a long-lived manager cost the most.
+
+- **At kickoff, for a big scope,** tell the user the rough cost of the plan, and check their plan
+  usage if a tool shows it.
+- **A fresh manager session per phase.** Hand over through `RESUME.md` (closing-out, Pausing)
+  instead of running one conversation for days.
+- **Keep tasks small** (Step 3).
+- **Filtered tests while iterating**, the full suite once per task.
+- **Grep generated YAML and logs, never read them whole.**
+- **Wait for notifications, do not poll.** Any loop that must poll has a hard stop.
+
+---
+
 ## Step 5 — Spawn the worker
 
 Read `references/worker-brief.md` and build every prompt from it. The short version:
@@ -176,6 +248,9 @@ Read `references/worker-brief.md` and build every prompt from it. The short vers
   "never switch branches", and what to report back.
 - **One writer at a time.** Wait for the current worker to finish and pass review before
   spawning the next.
+- **Draft the next brief while a writer runs.** Spawn it once the current task is accepted,
+  after adding the latest "Notes from task N" and "Also fix" items. The gap between tasks is then
+  a minute, not a brief-writing session.
 
 ### The baseline, before any worker starts
 
@@ -199,8 +274,8 @@ build is affordable per task. A worker should never have to discover this.
 ## Step 5a — The editor agent (singleton, queued)
 
 A Unity project can be held by one editor at a time, and an import is expensive. So editor-backed
-work does not live inside workers — it goes to **one shared editor agent**, spawned lazily and
-exactly once, on a weak model, kept alive to the end of the session. Read
+work does not live inside workers — it goes to **one shared editor agent**, spawned lazily, on a
+weak model, and addressed by id for the rest of the session. Read
 `references/editor-agent.md` the first time a worker reports `EDITOR REQUEST — no editor agent
 present`.
 
@@ -231,6 +306,9 @@ present`.
 
 A check-in or a "which way next" is not a fix round; answer it (Step 4a).
 
+After the first accepted task, create the game's structure map (`references/structure-map.md`).
+From then on every brief asks for it to be kept current, and a stale map is a review finding.
+
 ### 6a — Human sign-off, before a task is done
 
 Most game projects have no automated tests, so for most tasks **nothing automated proves the
@@ -251,9 +329,41 @@ demonstrate, it was too big and that belongs in the workflow-improvements sectio
 While you wait, you may keep read-only work moving — a review agent, a scan. Do not start the
 next writer: the branch is shared, and a failed sign-off means the current task is not finished.
 
+If the user checked the task in the editor, run `git status` once they are done. Changes the
+editor made on its own (`unity-scene-habits`, `references/builders.md` lists them) go in one
+housekeeping commit before the next writer starts. Anything else goes to the user.
+
+### 6b — Unattended mode
+
+Only when the user explicitly waives sign-off, for every task or for named ones. Log the waiver
+verbatim, with the date, in `decisions.md`, and patch `brief-common.md`. Then, for the waived
+tasks:
+
+- **Tests are the acceptance gate.** Every deliverable has a test that fails if the behaviour
+  breaks, driven through test seams and deterministic.
+- **Anything visual has a screenshot test,** and you open every PNG yourself
+  (`unity-scene-habits`, `references/visual-checks.md`).
+- **A separate reviewer on every task that changes behaviour,** since no person looks.
+- **Draft PRs and the report say plainly that nobody signed off,** and keep the manual checklist
+  for later.
+- **Feel stays unproven.** Movement, weapon feel and difficulty cannot be tested into being good;
+  the report lists them as needing a person.
+
+### A separate reviewer
+
 For a high-risk or large task, spawn one separate read-only reviewer agent rather than eyeballing
 it yourself, so the review stays adversarial: verdict **SHIP** or **FIX-FIRST**, findings tagged
 `[BLOCKER] / [SHOULD-FIX] / [NITPICK]` with `file:line`.
+
+Give it the plan as well as the diff, and ask what the next tasks on the plan will trip over. A
+problem that only bites three tasks later is cheapest to find now.
+
+A **SHOULD-FIX** on a task that already passed does not reopen it. It goes into the next brief
+that touches those files, under "Also fix (from task N review)", and that worker adds tests for
+it.
+
+**When the user asked for speed** (a game jam, a deadline), skip per-task reviewers. Run one now
+and then as a last look over everything since the previous one, and once before the report.
 
 ---
 
@@ -276,16 +386,16 @@ deliverable; the user opens the PRs.
 
 - You manage; agents implement. Never write game code as the manager — branch setup, session
   files and mechanical housekeeping are yours.
-- **No worktrees. One checkout, one branch, one writer at a time.** Read-only agents may run in
-  parallel, up to three.
+- **No worktree per worker. One checkout, one branch, one writer at a time.** Read-only agents
+  may run in parallel, up to three.
 - **Nobody switches branches, stashes, resets, force-checks-out or deletes a branch.** There is
   no isolated copy.
 - Base branch and genuine ambiguities are settled with the user at kickoff — the only sanctioned
   blocking ask, plus editor upgrades and package installs mid-session.
 - **Subagents never spawn subagents.** Say it in every prompt.
 - **Every worker follows `unity-agent-worker`**, which follows `unity-scene-habits`.
-- **Exactly one editor agent**, weak model, spawned on demand, given a copy-paste runbook. Workers
-  never drive the editor themselves.
+- **Exactly one editor agent**, weak model, spawned on demand, addressed by id, given a
+  copy-paste runbook. Workers never drive the editor themselves.
 - Order tasks by the conflict map. Scene-touching tasks are adjacent and ordered; prefabizing
   goes first.
 - **Establish how high the verification ladder goes before any worker starts** — tests or no

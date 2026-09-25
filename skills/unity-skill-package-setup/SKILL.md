@@ -4,7 +4,9 @@ description: >
   Wire a Unity project up to these skills: install the plugin at project scope, write a CLAUDE.md
   and AGENTS.md that route each kind of work to the right skill and make every handed-over task
   offer to run through `unity-manage-work`, check the repo's .gitignore and scene merge setup,
-  scan what is already there, generate a STRUCTURE.md describing the real project layout, and
+  install the Unity CLI's Pipeline package so skills can drive a running editor, offer
+  ProBuilder for a 3D game, scan what is
+  already there, generate a STRUCTURE.md describing the real project layout, and
   scaffold the standard asset folders. Use when: "/unity-skill-package-setup", "set this
   project up for Claude", "link these skills to my Unity project", "add a CLAUDE.md for this
   Unity project", "scaffold the asset folders", or opening a Unity project that has no CLAUDE.md.
@@ -21,9 +23,9 @@ Safe to re-run: every step checks what is already there and adds only what is mi
 | File | Read it when |
 |---|---|
 | `references/git-hygiene.md` | Checking `.gitignore` and scene merging (Step 3). |
-| `references/folder-scaffold.md` | Creating the asset folders (Step 5). |
-| `references/first-run-scan.md` | Reading what the project already is (Step 6). |
-| `references/project-memory.md` | Writing `CLAUDE.md` and `AGENTS.md` (Step 8). |
+| `references/folder-scaffold.md` | Creating the asset folders (Step 6). |
+| `references/first-run-scan.md` | Reading what the project already is (Step 7). |
+| `references/project-memory.md` | Writing `CLAUDE.md` and `AGENTS.md` (Step 9). |
 
 ## 1. Find the project and see what already exists
 
@@ -101,7 +103,62 @@ team gets the skills and `claude plugin update` keeps them current. Say that the
 If the user would rather keep it personal, drop `--scope project` — then the skills are theirs
 alone and the generated `CLAUDE.md` still documents the routing for everyone else.
 
-## 5. Scaffold the asset folders
+## 5. Connect the editor CLI
+
+The other skills drive the editor fastest through the Unity CLI's Pipeline package, which lets
+them run C# against a running editor instead of booting one in batch mode per change. Installing
+it is a one-time step per project, so it belongs here rather than in the middle of someone's
+task.
+
+It needs the `unity` CLI and an editor **6.0 or newer**. On an older project, skip this step
+and say the other skills will use batch mode. Without the CLI, say so and point the user at
+Unity's documentation for installing it; do not install it for them.
+
+```bash
+command -v unity && unity pipeline list --json --no-banner
+grep -n '"com.unity.pipeline"' "$ROOT/Packages/manifest.json" || echo "pipeline package not installed"
+```
+
+Ask first. It adds `com.unity.pipeline` to `Packages/manifest.json` and `packages-lock.json`,
+tracked files the whole team inherits, and it is an experimental package.
+
+The install has to run with the project closed. Unity reads the manifest when it loads the
+project, and the install refuses a project an editor has open, failing with
+`PIPELINE_MANIFEST_WRITE_FAILED`. If `unity pipeline list` shows an editor on this project, ask
+the user to save and close it themselves. Never close it for them: `unity close` exits without
+saving. Then install into the Unity project, which is not always the repo root:
+
+```bash
+unity pipeline install --project-path "$ROOT"
+grep -n '"com.unity.pipeline"' "$ROOT/Packages/manifest.json"
+```
+
+The grep is the check that it landed. When the user next opens the project, `unity pipeline
+list` shows the editor with Pipeline available. `unity-scene-habits` has what the connected
+path can do and how to read its results.
+
+### ProBuilder, for a 3D game
+
+`unity-level-design` blocks levels out best with ProBuilder: textures line up across walls of
+any length, doorways are real openings, and a person can push faces around afterwards. It is a
+3D tool, so ask whether the game is 3D rather than deciding it. Detect a guess first and put it
+in the question:
+
+```bash
+grep -oE '"com\.unity\.(probuilder|feature\.2d|2d\.[a-z.]+)"' "$ROOT/Packages/manifest.json"
+```
+
+2D packages suggest a 2D game, but many 3D projects carry them too, which is why this is a
+question and not a rule. If the game is 3D and ProBuilder is missing, offer it in the same
+question, with the cost in one line: its meshes serialize into prefabs, so their files grow.
+
+It is a package decision like Pipeline, and it installs the same way, with the project closed.
+Do both in the same closed window so the user closes the editor once. `unity-scene-habits`'
+`references/batch-mode.md` has the Package Manager recipe; the package id is
+`com.unity.probuilder`. A declined offer is fine: the level skill falls back to primitives.
+Record the answer, and Pipeline's, in the generated `CLAUDE.md`, so no later skill asks again.
+
+## 6. Scaffold the asset folders
 
 Read `references/folder-scaffold.md` for the default tree, what each folder is for, and the
 mechanics. The two that matter:
@@ -116,7 +173,7 @@ mechanics. The two that matter:
 Show the user the tree you propose before creating any of it. A project with its own established
 layout keeps its own layout; adopt their names rather than imposing these.
 
-## 6. Scan what is already there
+## 7. Scan what is already there
 
 Read `references/first-run-scan.md` and run it before writing `STRUCTURE.md`. A project adopting
 these skills has years of decisions in it; the scan reads them so the generated files describe
@@ -128,11 +185,11 @@ agents, and exclude third-party folders first or imported packages will dominate
 It produces three things: findings ordered by what hurts soonest, a backlog the user can hand
 straight to `unity-manage-work`, and the folder list `STRUCTURE.md` has to cover.
 
-## 7. Write STRUCTURE.md
+## 8. Write STRUCTURE.md
 
 The structure file is the project's record of where things go, the thing `CLAUDE.md` points at
 when deciding where a new asset belongs, and the file `unity-file-structure-habits` checks the
-tree against. Generate it from the scan in Step 6 and what is actually on disk — never from the
+tree against. Generate it from the scan in Step 7 and what is actually on disk — never from the
 template — so it describes the project, including the folders that do not fit the scaffold.
 
 **Keep the folder list as a table, one row per folder, path first.** That is the contract: it
@@ -151,7 +208,7 @@ Say in the file that it is expected to grow, that new categories are added as th
 them rather than invented up front, and that a folder missing from the table is a gap in the
 table rather than a misplaced folder.
 
-## 8. Write CLAUDE.md and AGENTS.md
+## 9. Write CLAUDE.md and AGENTS.md
 
 Read `references/project-memory.md` for the content. In short, the generated `CLAUDE.md` carries:
 
@@ -167,7 +224,7 @@ Read `references/project-memory.md` for the content. In short, the generated `CL
 `AGENTS.md` covers the same ground for tools that read that filename instead. Write it as a short
 file that points at `CLAUDE.md` rather than duplicating it — two copies of the same rules drift.
 
-## 9. Verify and report
+## 10. Verify and report
 
 ```bash
 ls "$REPO/CLAUDE.md" "$REPO/AGENTS.md" "$REPO/STRUCTURE.md"
@@ -178,7 +235,9 @@ Then tell the user, in this order:
 
 1. **Anything broken that they must decide on**, first: an ignored `.meta`, serialization not
    set to Force Text, `UserSettings/` committed, a missing editor version, no licence.
-2. What you created, and what you left alone because it already existed.
+2. What you created, and what you left alone because it already existed. Say whether the
+   Pipeline package went in, was already there, or was skipped and why, and the same for
+   ProBuilder.
 3. **The backlog from the scan** — the real work the project needs, ordered, and the offer to run
    it through `unity-manage-work`.
 4. That nothing is committed. Suggest it as its own commit — setup is not a feature change and

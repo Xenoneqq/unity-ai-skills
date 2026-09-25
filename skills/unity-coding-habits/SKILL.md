@@ -6,8 +6,9 @@ description: >
   fake null they are, pick one way to find things instead of mixing singletons and scene
   searches, keep types small and namespaced, and never restyle code you are only passing
   through. Use when writing or changing a `MonoBehaviour`, `ScriptableObject` or any C# under
-  `Assets/`; "is this MonoBehaviour right", "clean up this component", "how should I write this
-  component", "/unity-coding-habits". Reviewing a change is `unity-review-change`; diagnosing a
+  `Assets/`, including tests; "is this MonoBehaviour right", "clean up this component", "how
+  should I write this component", "how do I test this", "write a PlayMode test",
+  "/unity-coding-habits". Reviewing a change is `unity-review-change`; diagnosing a
   game that already runs badly is `unity-debug-runtime`.
 ---
 
@@ -32,6 +33,7 @@ carries the procedures that keep references and stored values intact.
 | [references/serialization.md](references/serialization.md) | Adding or renaming a serialized field, writing a `ScriptableObject`, or the inspector shows the wrong value. |
 | [references/per-frame.md](references/per-frame.md) | Writing `Update`/`FixedUpdate`, chasing frame cost or GC spikes, or writing a coroutine or `async` method. |
 | [references/wiring.md](references/wiring.md) | Deciding how one object finds another, loading assets at runtime, or setting up namespaces and assembly definitions. |
+| [references/testing.md](references/testing.md) | Writing a test for input- or chance-driven code, a PlayMode test, or a playthrough that proves a level can be finished. |
 
 ## 1. Expose to the inspector, not to the codebase
 
