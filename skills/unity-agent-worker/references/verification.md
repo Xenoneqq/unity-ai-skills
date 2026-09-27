@@ -166,8 +166,8 @@ Rules:
 
 - **Name the scene and the exact steps.** "Check the drill works" is not a checklist.
 - **Say what counts as failure**, not only what counts as success.
-- **One checklist per task**, written when the task is otherwise green — not accumulated and not
-  deferred.
+- **One checklist per task**, written when the task is otherwise green, not accumulated and not
+  deferred. Batched sign-off (`unity-manage-work`) batches the confirming, never the writing.
 - A reported failure comes back as a fix round to the same worker, exactly like a review finding.
 
 ## Reporting the level

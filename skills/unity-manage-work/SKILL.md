@@ -166,7 +166,8 @@ For every task write down what it touches, in this order of danger:
 | Assets, `.meta`, `ProjectSettings` | Binary or structurally unmergeable. Treat any overlap as a hard conflict. |
 | C# only | Ordinary text. Normal merge rules apply. |
 
-Because writers are sequential, this map decides **order**, not parallelism:
+Because writers are sequential by default, this map decides **order** (in speed mode it is also
+the proof that tasks do not overlap):
 
 - Tasks touching the same scene or prefab go **adjacent and ordered**, never interleaved, so a
   half-finished change never sits under the next one.
@@ -332,9 +333,12 @@ Only when the user asks for speed **and** the tasks provably do not overlap: dif
 assembly definitions, no shared scene or prefab, no shared core code. It has not been measured on
 a real session yet; time the first one before relying on it.
 
-- **Up to three files-lane writers in parallel**, each in its own git worktree
-  (`isolation: "worktree"`, required) on its own task branch. That is safe only because they
-  never open the editor there, so no worktree pays a `Library/` import. Their compile check
+- **Up to three files-lane writers in parallel**, each in its own git worktree on its own task
+  branch (required). You cut both yourself, so the branch keeps its task name:
+  `git worktree add -b <task-branch> ../<repo>-<task> <session-branch>`, then spawn the worker
+  with no `isolation` and name the worktree path and branch in its brief. Remove the worktree with
+  `git worktree remove` once its branch is merged. That is safe only because they never open the
+  editor there, so no worktree pays a `Library/` import. Their compile check
   outside the editor can reuse the main checkout's warm `Library/` (`unity-agent-worker`,
   `references/files-first.md`).
 - **Integrate in waves.** Merge each finished branch into the session branch in the main checkout,
