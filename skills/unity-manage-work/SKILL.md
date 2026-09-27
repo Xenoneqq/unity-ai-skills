@@ -253,8 +253,9 @@ resends the agent's whole conversation, so long workers and a long-lived manager
   instead of running one conversation for days.
 - **Keep tasks small** (Step 3).
 - **A test budget in every brief** (`unity-agent-worker`, the test budget): code first and
-  tests after, filtered runs while working, only failures rerun, and a hard number, "at most N
-  test runs", with the filter to use. Every run costs a recompile and a domain reload.
+  tests after, isolated runs while working, list, isolate, test, fix when the full run breaks,
+  and a hard number, "at most N test runs", with the filter to use. Every run costs a recompile
+  and a domain reload.
 - **The full suite once per session**, right before the final commit, run by the last writer or
   by you. A task that touches shared core code (the player controller, the save system, anything
   many features depend on) earns its own full run, so a late red suite can still be traced.

@@ -112,11 +112,11 @@ a ladder: climb as far as this project allows, then **say which rung you reached
 you have not run.
 
 - **It compiles.** No `error CS` anywhere in the run.
-- **Tests pass** *if the project has any*: the filtered tests for what changed, and the full
-  suite before the last commit (test budget, below), apart from the known-failing baseline you
-  were given, by name. A failure outside that list is yours and blocks the commit. Chasing one inside it is
-  wasted work; hiding a real one behind "already broken" is worse. If the project has no tests,
-  say that rather than reporting a green suite.
+- **Tests pass** *if the project has any*: the isolated tests for what changed, and one full
+  run before the last commit (test budget, below), apart from the known-failing baseline you
+  were given, by name. A failure outside that list is yours and blocks the commit. Chasing one
+  inside it is wasted work; hiding a real one behind "already broken" is worse. If the project
+  has no tests, say that rather than reporting a green suite.
 - **No new import errors** beyond the baseline: missing references, broken shaders, console
   errors on a clean import.
 - **No new broken references.** The most common real breakage in Unity and it needs no test
@@ -153,14 +153,17 @@ Every editor-backed test run pays a recompile, a domain reload (30-90 s) and, fo
 entering Play mode. Spend runs deliberately:
 
 - **Code first, tests after.** Write the whole change, or the whole batch of small tasks, then
-  run tests once over it. Never edit, test, edit, test per task.
-- **Filter while working.** Run only the tests for what changed, by category or by name.
-- **Rerun only what failed**, by name, in one call: `unity-scene-habits`' `references/run-tests.sh`
-  takes several names.
-- **The full suite once**, right before your final commit, unless your brief says it runs at the
-  end of the session instead. A change to shared core code (the player controller, the save
-  system, anything many features depend on) earns its own full run, so a late red suite can
-  still be traced.
+  test it in the editor pass. Never edit, test, edit, test per task.
+- **While working, test a little, isolated only**: the filtered tests for the case at hand, by
+  category or by name.
+- **At the end, one full run** to confirm nothing else broke, right before your final commit,
+  unless your brief says it runs at the end of the session instead. A change to shared core code
+  (the player controller, the save system, anything many features depend on) earns its own full
+  run, so a late red suite can still be traced.
+- **If the full run breaks: list, isolate, test, fix.** List the failures, rerun each on its own
+  to confirm it is real, reproduce it with that test, fix it, then rerun only those tests plus
+  the area the fix touched. `references/verification.md` has the loop; the test script takes
+  several names, so each rerun is one call.
 - **Stay under the number of runs your brief gives.** Needing more is a finding to report.
 
 **Rungs 2 and 3 run once, when the task is otherwise done**: does the game start, and does it
