@@ -2,9 +2,9 @@
 
 Read this before spawning any worker. Every worker prompt is built from it.
 
-Agent tool, `subagent_type: "general-purpose"`, model from Step 4, and **no `isolation`** — the
-worker works in the user's own checkout on the branch you already cut. There is no worktree and
-no second copy, which is why only one writer runs at a time.
+Agent tool, `subagent_type: "general-purpose"`, model from Step 4, and **no `isolation`** outside
+speed mode (Step 5b): the worker works in the user's own checkout on the branch you already cut.
+There is no worktree and no second copy, which is why only one writer runs at a time.
 
 Write it as two files, a common brief and a task brief, and keep the prompt itself short;
 [brief-templates.md](brief-templates.md) has both templates.
@@ -14,8 +14,7 @@ Write it as two files, a common brief and a task brief, and keep the prompt itse
 Tell it to invoke `unity-agent-worker` and follow it for the whole task. That skill already
 carries the process: project rules first, milestones, engine work through `unity-scene-habits`,
 files first and one editor pass through the test script, the gate before every commit, never
-push. Your prompt
-supplies what it cannot know and pre-answers what it would otherwise stop on.
+push. Your prompt supplies what it cannot know and pre-answers what it would otherwise stop on.
 
 ## What every prompt must contain
 

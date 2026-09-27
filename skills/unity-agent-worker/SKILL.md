@@ -27,10 +27,11 @@ these hold:
 - It touches a handful of existing files and adds no new script.
 - The brief says exactly what to change. Nothing is left to design.
 
-The quick path: read the project's `CLAUDE.md`, make the edit, run one existing test that covers
-the area if there is one, run the rung-0 checks from section 5 (every asset paired with its
-`.meta`, the scene diff intended), and commit. If nothing automated covers it, add a one-line
-manual check to your report. No milestones, no screenshots, no new tests, no reading every skill.
+The quick path: read the project's `CLAUDE.md`, make the edit (straight through the editor CLI;
+a one-off needs no builder), run one existing test that covers the area if there is one, run the
+rung-0 checks from section 5 (every asset paired with its `.meta`, the scene diff intended), and
+commit. If nothing automated covers it, add a one-line manual check to your report. No
+milestones, no screenshots, no new tests, no reading every skill.
 
 A new mechanic, a new system, or risky code such as the player controller or the save system
 takes the full process. If a quick task turns out to need new code, switch to it and say so.

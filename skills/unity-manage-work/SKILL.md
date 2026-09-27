@@ -1,8 +1,8 @@
 ---
 name: unity-manage-work
 description: >
-  Run a Unity task or backlog end to end as a MANAGER: settle the base branch with the user, cut
-  one branch, plan the order from a scene-and-prefab conflict map, delegate implementation to
+  Run a Unity task or backlog end to end as a MANAGER: settle the base branch and branch mode
+  with the user, plan the order from a scene-and-prefab conflict map, delegate implementation to
   worker subagents that follow `unity-agent-worker`, keep one agent at a time on the editor,
   review what comes back, and close with a report and a draft PR file per
   task. Work happens in the user's own checkout — no worktree per worker — so writers run one
@@ -273,8 +273,8 @@ real features: a new mechanic, a new system, risky code.
 
 Read `references/worker-brief.md` and build every prompt from it. The short version:
 
-- Agent tool, `subagent_type: "general-purpose"`, model from Step 4. **No `isolation`** — the
-  worker works in the user's checkout, on the branch you already cut.
+- Agent tool, `subagent_type: "general-purpose"`, model from Step 4. **No `isolation`** outside
+  speed mode (Step 5b): the worker works in the user's checkout, on the branch you already cut.
 - Every worker follows the `unity-agent-worker` skill, which follows `unity-scene-habits` for
   anything touching the engine.
 - The prompt carries: the task in full, every locked decision verbatim, anchor files to mirror,
