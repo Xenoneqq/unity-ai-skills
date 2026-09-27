@@ -67,6 +67,20 @@ pointing at a skill nobody has installed sends the reader nowhere.
 - **Packages settled at setup** — Pipeline and ProBuilder: installed, already there, or declined.
   A declined package is not offered again.
 
+## How agents work here
+
+Pointers only; the skills carry the procedure.
+
+- **Files first.** C# and builder scripts are written as files, and the editor is used once per
+  task (`unity-agent-worker`). Compile check outside the editor: <the exact command once it is
+  established, or "none, use the editor recompile">.
+- **Tests.** Isolated tests while working, one full run at the end, and list, isolate, test, fix
+  when it breaks (`unity-agent-worker`).
+- **One writer at a time.** Parallel writers in worktrees are speed mode, only on request
+  (`unity-manage-work`).
+- **Branches.** <one session branch per body of work, or stacked branches, one per task; leave
+  it out and the manager asks at kickoff>. Agents never push or merge.
+
 ## Hard rules
 
 - **Prefab first.** Anything groupable is a prefab. Scenes change only when nothing else will do.
@@ -96,6 +110,7 @@ This project's instructions for coding agents live in [CLAUDE.md](CLAUDE.md). Re
 
 The short version: prefab-first, never hand-edit `.unity` / `.prefab` / `.meta`, commit every
 asset together with its `.meta`, and check [STRUCTURE.md](STRUCTURE.md) before creating anything.
+Work in files first, one writer at a time, and use the editor once per task.
 ````
 
 ## Rules for writing them

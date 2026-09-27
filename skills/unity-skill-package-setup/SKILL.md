@@ -242,6 +242,11 @@ Read `references/project-memory.md` for the content. In short, the generated `CL
 - **Who drives the editor** (the agent doing the task, by default) and **whether agents may save
   the open scene** through the editor. Ask the user both; the test runs in `unity-scene-habits`
   depend on the second.
+- **How agents work here**, as pointers to the skills rather than copies: files first, with the
+  compile check outside the editor once it is established; isolated tests while working, one
+  full run at the end, and list, isolate, test, fix when it breaks; one writer at a time, with
+  speed mode only on request; and the preferred branch mode if the user has one (one session
+  branch, or stacked branches per task), otherwise the manager asks at kickoff.
 
 `AGENTS.md` covers the same ground for tools that read that filename instead. Write it as a short
 file that points at `CLAUDE.md` rather than duplicating it — two copies of the same rules drift.
