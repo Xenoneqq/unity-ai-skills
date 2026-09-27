@@ -50,6 +50,19 @@ test's line of fire breaks that test. Prefer behaviour tests that build their ow
 runtime, and keep a shared test scene for smoke and screenshot tests. If features must share one,
 give each its own region of it.
 
+## Categories
+
+Give every test a category for its feature or area, on the fixture:
+
+```csharp
+[TestFixture, Category("Doors")]
+public class DoorTests { }
+```
+
+A worker then runs only what it changed with one category filter instead of a list of names,
+and every run it skips saves a recompile and a domain reload. Name categories after the feature
+folders. Reserve extra ones, such as `Screenshot` or `Slow`, for tests routine runs should skip.
+
 ## Long tests
 
 `[UnityTest]` times out after 180 seconds by default. A playthrough or soak test that needs

@@ -42,6 +42,9 @@ few lines on top of the common brief.
   every deliverable also needs a test that fails if the behaviour breaks, driven through test
   seams and deterministic (`unity-coding-habits`, `references/testing.md`), and that the
   checklist is still written, for the combined sign-off at the end of the session.
+- **A hard test budget**: "at most N test runs", the filter to use (a category or test names),
+  and whether this worker runs the full suite before its last commit or leaves it to the end of
+  the session.
 - **Which scenes and prefabs this task is allowed to touch**, and which it must not. This is the
   conflict map, handed down. If it needs something outside that set, it reports rather than
   spreading.

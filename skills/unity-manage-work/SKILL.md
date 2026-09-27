@@ -231,7 +231,12 @@ resends the agent's whole conversation, so long workers and a long-lived manager
 - **A fresh manager session per phase.** Hand over through `RESUME.md` (closing-out, Pausing)
   instead of running one conversation for days.
 - **Keep tasks small** (Step 3).
-- **Filtered tests while iterating**, the full suite once per task.
+- **A test budget in every brief** (`unity-agent-worker`, the test budget): code first and
+  tests after, filtered runs while working, only failures rerun, and a hard number, "at most N
+  test runs", with the filter to use. Every run costs a recompile and a domain reload.
+- **The full suite once per session**, right before the final commit, run by the last writer or
+  by you. A task that touches shared core code (the player controller, the save system, anything
+  many features depend on) earns its own full run, so a late red suite can still be traced.
 - **Grep generated YAML and logs, never read them whole.**
 - **Wait for notifications, do not poll.** Any loop that must poll has a hard stop.
 

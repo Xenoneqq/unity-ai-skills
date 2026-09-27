@@ -66,6 +66,8 @@ verification results with output, anything deviated from, discovered or left und
 ## Tests
 <what each deliverable is proven by; screenshot tests only for real visual work; new tests
 only for new behaviour>
+At most <N> test runs, filtered by <category or names>. Full suite: <before your last commit /
+at the end of the session, not yours>.
 
 ## Notes from task <N-1>
 <what this worker must know: layers or tags added, API shapes, which test areas are taken,
