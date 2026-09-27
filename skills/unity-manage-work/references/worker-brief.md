@@ -38,9 +38,10 @@ few lines on top of the common brief.
   smoke-tested in play mode, is a build affordable per task. The worker must not have to discover
   this. Say explicitly that it reports the rung it reached and never claims "verified".
 - **That a manual checklist is required** whenever nothing automated proves the behaviour, and
-  that the task is not done until a person confirms it. Under unattended mode (Step 6b) say
-  instead that every deliverable needs a test that fails if the behaviour breaks, driven through
-  test seams and deterministic (`unity-coding-habits`, `references/testing.md`).
+  that the task is not done until a person confirms it. Under unattended mode (Step 6b) add that
+  every deliverable also needs a test that fails if the behaviour breaks, driven through test
+  seams and deterministic (`unity-coding-habits`, `references/testing.md`), and that the
+  checklist is still written, for the combined sign-off at the end of the session.
 - **Which scenes and prefabs this task is allowed to touch**, and which it must not. This is the
   conflict map, handed down. If it needs something outside that set, it reports rather than
   spreading.

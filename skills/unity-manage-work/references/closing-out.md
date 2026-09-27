@@ -18,8 +18,9 @@ invent one.
 ## Step 8 — Draft PRs, as files
 
 When a task is accepted, write `session-materials/pr-<task-slug>.md`: base branch, head branch,
-title, body, and the verification that actually ran — the rung reached, what is still unproven,
-and that a person signed the behaviour off. Never write "tested" or "verified" for a project with
+title, body, and the verification that actually ran: the rung reached, what is still unproven,
+and whether a person signed the behaviour off or it waits in the combined sign-off at the end of
+the session (Step 6a). Never write "tested" or "verified" for a project with
 no tests; say what was checked and what was not.
 
 Follow the project's own PR template and contributing rules where it has them; a plain
@@ -40,7 +41,7 @@ deliverable; the user opens the PRs.
 2. **Token & time accounting** — per agent, then session totals. Say plainly which were
    unavailable.
 3. **Implementations** — per task: what it covers, **the verification rung it reached and what
-   remains unproven**, who signed it off (or that nobody did, under unattended mode), and for any
+   remains unproven**, who signed it off or that it waits in the combined sign-off, and for any
    **PARTIAL**: what landed, what did not, the blocker, the suggested next step. Under unattended
    mode, list anything about feel (movement, weapon feel, difficulty) as unproven and needing a
    person, whatever the tests say.
@@ -52,6 +53,8 @@ deliverable; the user opens the PRs.
    missing anchor files, conflicts you did not predict. Include the workers' "Tooling / skill
    friction" lists, triaged: what was missing, wrong or awkward in the skills themselves.
 6. **Draft PRs** — path to each file.
+7. **Combined sign-off**: every checklist still waiting, together and grouped by task, as the
+   final gate before the user pushes or merges. Omit it if nothing waits.
 
 ## What the report is for
 

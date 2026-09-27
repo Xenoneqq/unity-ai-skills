@@ -321,7 +321,22 @@ From then on every brief asks for it to be kept current, and a stale map is a re
 Most game projects have no automated tests, so for most tasks **nothing automated proves the
 feature behaves.** A person has to look, and the task is not accepted until they have.
 
-When a task is otherwise green and you are satisfied with the diff:
+When they look depends on the mode and on the task:
+
+| Mode | Small task | New mechanic or risky code |
+|---|---|---|
+| Attended | One combined sign-off at the end of the batch or session | Per task, blocking, as below |
+| Unattended (6b) | Every checklist in one sign-off at the end of the session, before the user pushes or merges | Same |
+
+A small task is one on the quick path (Step 5). Deferring its sign-off means a later task can
+build on a broken earlier one. Tests as the gate and conflict-map ordering keep that risk small,
+and a task that other tasks build on is not small.
+
+A combined sign-off posts every waiting checklist together, grouped by task, with each task's
+rung. A failed item goes back to whoever did that task as an ordinary fix round, then a quick
+recheck of that item only.
+
+For a per-task sign-off, when the task is otherwise green and you are satisfied with the diff:
 
 1. Post the worker's manual checklist to the user — the scene, the exact steps, what counts as
    failure — together with the rung the task actually reached and what remains unproven.
@@ -342,9 +357,9 @@ housekeeping commit before the next writer starts. Anything else goes to the use
 
 ### 6b — Unattended mode
 
-Only when the user explicitly waives sign-off, for every task or for named ones. Log the waiver
-verbatim, with the date, in `decisions.md`, and patch `brief-common.md`. Then, for the waived
-tasks:
+Only when the user explicitly waives per-task sign-off, for every task or for named ones.
+Sign-off is then deferred, not dropped. Log the waiver verbatim, with the date, in
+`decisions.md`, and patch `brief-common.md`. Then, for the waived tasks:
 
 - **Tests are the acceptance gate.** Every deliverable has a test that fails if the behaviour
   breaks, driven through test seams and deterministic.
@@ -352,8 +367,9 @@ tasks:
   you open every PNG yourself
   (`unity-scene-habits`, `references/visual-checks.md`).
 - **A separate reviewer on every task that changes behaviour,** since no person looks.
-- **Draft PRs and the report say plainly that nobody signed off,** and keep the manual checklist
-  for later.
+- **Every checklist still reaches a person.** Collect them into one sign-off at the end of the
+  session, the final gate before the user pushes or merges (6a). Until it runs, draft PRs and the
+  report say plainly that nobody has signed off yet.
 - **Feel stays unproven.** Movement, weapon feel and difficulty cannot be tested into being good;
   the report lists them as needing a person.
 
@@ -414,7 +430,8 @@ deliverable; the user opens the PRs.
 - **Baselines before any worker starts**: failing tests if any, existing import errors, existing
   broken references.
 - **A task is not done until a person has signed off its behaviour.** On a project without tests
-  that is the only thing proving the feature works. It blocks; it is not a formality.
+  that is the only thing proving the feature works. It blocks; it is not a formality. Small
+  tasks, and every task in unattended mode, are signed off together at the end (Step 6a).
 - **Never report "verified" for a project with no tests.** State the rung and what is unproven.
 - Workers commit rarely, subject-only messages, never on a red gate.
 - **Never push, never open a remote PR — manager included.**

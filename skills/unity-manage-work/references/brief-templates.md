@@ -32,7 +32,8 @@ outrank every skill. Never spawn subagents. Smallest diff that fully solves the 
 
 ## Verification ladder
 <how high it goes: tests, play-mode smoke, build per task or not>
-<sign-off mode: manual checklist for a person, or a test per deliverable (unattended)>
+<sign-off mode: per task, batched at the end, or unattended (a test per deliverable, checklists
+signed off together at the end)>
 
 ## Editor agent
 Id: <current id>. Path: <connected or batch>. Send one request at a time; to wait, end your turn.
