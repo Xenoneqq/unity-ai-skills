@@ -9,9 +9,9 @@ Keep `session-materials/tracking.md` from the first spawn; you cannot reconstruc
 
 | task | agent id | model | scenes/prefabs touched | started | finished | tokens | status |
 
-Give the editor agent its own row, plus a line per run (what ran, verdict, duration). Fill tokens
-and timing from each completion notification; write `n/a` when a number was not reported, never
-invent one.
+Log a line per editor run (who ran it, what, verdict, duration); an editor agent, if used, gets
+its own row. Fill tokens and timing from each completion notification; write `n/a` when a number
+was not reported, never invent one.
 
 ---
 
@@ -77,13 +77,15 @@ leave everything a new session needs on disk.
    it or clean it up; the user decides.
 2. **Write `session-materials/RESUME.md`**: HEAD, the tasks accepted so far, the task in progress
    and which brief to respawn its worker from, the editor path in use (connected or batch, editor
-   open or closed), and a note that the editor agent must be respawned.
-3. **On resume**, respawn the editor agent from `editor-agent-prompt.md`, put its new id in
-   `brief-common.md`, and make its first job an import check. Ask the editor question from Step 0
-   again, since the user's setup may have changed, and patch `brief-common.md` to match.
+   open or closed), and, if an editor agent was used, a note that it must be respawned.
+3. **On resume**, remove a stale `session-materials/editor.lock` now that no agent is running,
+   and run an import check. If an editor agent was used, respawn it from
+   `editor-agent-prompt.md` and put its new id in `brief-common.md`. Ask the editor question
+   from Step 0 again, since the user's setup may have changed, and patch `brief-common.md` to
+   match.
 
 ### After a crash or power loss
 
 Check before building on anything: `git fsck`, then an import, the EditMode suite and the
-PlayMode suite through the editor agent, then look for Unity processes or wait loops left over
+PlayMode suite through the test script, then look for Unity processes or wait loops left over
 from before the crash. Only then respawn the writer.

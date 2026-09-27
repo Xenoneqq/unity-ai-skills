@@ -13,7 +13,7 @@ Write it as two files, a common brief and a task brief, and keep the prompt itse
 
 Tell it to invoke `unity-agent-worker` and follow it for the whole task. That skill already
 carries the process: project rules first, milestones, engine work through `unity-scene-habits`,
-editor runs through the editor agent, the gate before every commit, never push. Your prompt
+editor runs through the test script, the gate before every commit, never push. Your prompt
 supplies what it cannot know and pre-answers what it would otherwise stop on.
 
 ## What every prompt must contain
@@ -51,7 +51,9 @@ few lines on top of the common brief.
 - **Whether a scene change is expected at all.** Most tasks should come back with an empty
   `git diff -- '*.unity'`. Say so explicitly, so an unexpected scene diff is visibly wrong rather
   than quietly accepted.
-- The **editor agent's name** if one already exists, so it does not have to ask.
+- **Where the test script and the editor lock are** (`session-materials/run-tests.sh`,
+  `session-materials/editor.lock`), and whether another worker runs in parallel and which files
+  it owns.
 - **The shared-checkout rules, verbatim** (next section).
 - **You must NOT spawn subagents.** Do all the work yourself.
 - KISS: the smallest diff that fully solves the task; do not delete comments or code the task
@@ -76,8 +78,10 @@ few lines on top of the common brief.
 - **Stay on the branch named in this brief.** Do not create, rename, switch or delete a branch.
 - **Never `git stash`, `reset --hard`, `checkout --force`, or delete a branch.**
 - If the working tree has changes you did not make, **stop and report it**. Do not build on
-  someone else's uncommitted work.
-- Leave `session-materials/` alone apart from `screenshots/`; it is not yours.
+  someone else's uncommitted work. The exception is a parallel worker this brief names: its files
+  are expected. Stage and commit only your own files, by path, never `git add -A`.
+- Leave `session-materials/` alone apart from `screenshots/` and the editor lock; it is not
+  yours.
 - **When a command's output decides something**, such as a grep that finds nothing or a count,
   put anything beyond a one-liner in a script file and send the output to a file before reading
   it. Shell hooks can rewrite commands and trim their output, and a missed match looks exactly
@@ -92,14 +96,15 @@ few lines on top of the common brief.
 
 ## Editor work, verbatim
 
-Anything needing the editor — a batch run, a build, a test suite, an import check — is serialized
-through one shared editor agent, because a Unity project can be held by one editor at a time and
-an import is expensive. Never drive the editor yourself.
+A Unity project can be held by one editor at a time and an import is expensive, so only one
+agent uses the editor at a time. You drive it yourself.
 
-1. Check whether an editor agent exists (`ListAgents`, or the name in this brief).
-2. If none exists, report `EDITOR REQUEST — no editor agent present` to the manager, with the
-   request below.
-3. Send it: the branch, exactly what to run, and what counts as pass.
-4. **One outstanding request at a time.** Wait for the verdict; keep working on anything that
-   does not depend on it. To wait, end your turn: the reply resumes you. Never sleep in a loop
-   or poll the editor agent's output.
+1. Run tests with `session-materials/run-tests.sh --lock session-materials/editor.lock`. It
+   refreshes, recompiles, reloads, checks the editor is ready and no scene is dirty, then runs.
+2. **Exit 4**: the lock stayed busy. Work on something that does not need the editor, try once
+   more, and report if it is still held. Never loop on it.
+3. **Exit 3**: the editor stopped answering, almost always a modal dialog. Stop and report; do
+   not retry.
+4. A build or an import check takes the same lock (`mkdir`, released in a `trap`), one at a time.
+5. If this brief names an editor agent instead, send it the branch, exactly what to run and what
+   counts as pass, one request at a time. To wait, end your turn: the reply resumes you.

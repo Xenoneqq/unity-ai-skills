@@ -3,7 +3,8 @@ name: unity-agent-worker
 description: >
   Carry one Unity task end to end in the user's own checkout: read the project's rules first,
   work in verifiable milestones, do all engine work through `unity-scene-habits` (prefab-first,
-  editor CLI, never hand-edit YAML), send editor-backed runs to the shared editor agent, keep
+  editor CLI, never hand-edit YAML), drive editor runs itself with one agent on the editor at a
+  time, keep
   every new asset paired with its `.meta`, verify before every commit, and never push or switch
   branches. Use when handed a single Unity task to implement — by a user, or as a worker spawned
   by `unity-manage-work`.
@@ -57,9 +58,11 @@ There is no worktree and no isolated copy. The tree you are editing is the user'
   to recover from.
 - **Stay inside your file set.** If the task needs a file nobody mentioned, that is a finding to
   report, not a licence to spread.
-- **Leave `session-materials/` alone.** It is the manager's.
+- **Leave `session-materials/` alone**, apart from the editor lock and anything your brief lets
+  you write there. It is the manager's.
 - If the working tree contains changes you did not make, stop and report it. Do not build on top
-  of someone else's uncommitted work.
+  of someone else's uncommitted work. The exception is a parallel worker your brief names: its
+  files are expected, and you stage and commit only your own, by path.
 
 ## 3. Work in milestones
 
@@ -71,22 +74,30 @@ section 5, not the milestones.
 Prefer the smallest diff that fully solves the task. Do not delete comments or code the task does
 not require you to touch, and do not tidy things nobody asked about.
 
-## 4. Engine work goes through the CLI, editor runs go through the editor agent
+## 4. Engine work goes through the CLI, and you drive the editor yourself
 
 Prefab and asset edits you drive yourself, per `unity-scene-habits` — prefab-first, edit prefab
 assets rather than scenes, never hand-edit `.unity`, `.prefab` or `.meta`.
 
-Anything needing the editor itself — a batch run, a build, a test suite, an import check — is
-**serialized centrally**, because one project can be held by one editor at a time and an import
-is expensive. Never drive it yourself:
+Runs that need the editor itself, a test run, a build, an import check, you drive too, but
+**only one agent uses the editor at a time**: one project can be held by one editor, and an
+import is expensive.
 
-1. Check whether an editor agent exists (`ListAgents`, or the name your manager gave you).
-2. If none exists, report `EDITOR REQUEST — no editor agent present` to your manager, with the
-   request below. The manager spawns it and hands you its name.
-3. Send it: the branch, exactly what to run, and what counts as pass.
-4. **One outstanding request at a time.** Wait for the verdict before sending another, and keep
-   working on anything that does not depend on it. To wait, end your turn: the reply resumes
-   you. Never sleep in a loop or poll the editor agent's output.
+- **Run tests through the test script**, `unity-scene-habits`' `references/run-tests.sh`, or the
+  copy your brief names. It refreshes, recompiles with focus, reloads, checks the editor is ready
+  and no scene is dirty, and stops on a modal dialog instead of polling forever.
+- **Take the editor lock** when another agent may use the editor: `--lock <dir>`, the path in
+  your brief. The wait is bounded and the script exits without running if the lock never frees.
+  Work on something else, try once more, then report. Never loop on it. A build or import check
+  takes the same lock with `mkdir`, released in a `trap`.
+- **Exit 3 means stop.** The editor stopped answering, almost always a modal dialog. Report it.
+- **In batch mode** the editor must be closed, and it is one batch run at a time
+  (`unity-scene-habits`).
+- **The project's rule wins.** If the project's `CLAUDE.md` says who drives the editor, follow it
+  over this section.
+- If your brief names an editor agent instead (`unity-manage-work`), send it the branch, exactly
+  what to run and what counts as pass, one request at a time. To wait, end your turn: the reply
+  resumes you.
 
 ## 5. Verify — as far as the project allows
 
@@ -150,8 +161,8 @@ entering Play mode. Spend runs deliberately:
 - **Stay under the number of runs your brief gives.** Needing more is a finding to report.
 
 **Rungs 2 and 3 run once, when the task is otherwise done**: does the game start, and does it
-build. Both need the editor, so both go through the editor agent. They are slow; do not run them
-per milestone.
+build. Both need the editor; run them as in section 4. They are slow; do not run them per
+milestone.
 
 **Rung 4 is a human, and it blocks.** When nothing above proves the feature behaves — which on a
 project without tests is most features — write a manual checklist: the scene to open, the exact

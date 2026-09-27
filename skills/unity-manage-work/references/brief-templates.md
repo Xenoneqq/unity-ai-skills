@@ -6,7 +6,7 @@ written per task. The worker prompt itself is then about ten lines: invoke `unit
 read both files, follow them.
 
 Patch `brief-common.md` whenever the environment changes: unattended mode switched on, the editor
-opened or closed, Pipeline installed, the editor agent respawned. A task brief that contradicts
+opened or closed, Pipeline installed, a parallel worker started. A task brief that contradicts
 a stale common brief leaves the worker guessing which one is current.
 
 ## `brief-common.md`
@@ -35,8 +35,10 @@ outrank every skill. Never spawn subagents. Smallest diff that fully solves the 
 <sign-off mode: per task, batched at the end, or unattended (a test per deliverable, checklists
 signed off together at the end)>
 
-## Editor agent
-Id: <current id>. Path: <connected or batch>. Send one request at a time; to wait, end your turn.
+## Editor
+Path: <connected or batch>. Who drives it: <you, through the test script / the project's rule>.
+Test script: `session-materials/run-tests.sh`. Lock: `session-materials/editor.lock`.
+Parallel worker: <name and the files it owns, if any>.
 
 ## Report back
 Branch, every file created or edited with full paths, scenes and prefabs touched and why,

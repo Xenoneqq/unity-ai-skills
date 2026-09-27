@@ -3,13 +3,13 @@ name: unity-manage-work
 description: >
   Run a Unity task or backlog end to end as a MANAGER: settle the base branch with the user, cut
   one branch, plan the order from a scene-and-prefab conflict map, delegate implementation to
-  worker subagents that follow `unity-agent-worker`, route all editor-backed work through one
-  shared editor agent, review what comes back, and close with a report and a draft PR file per
+  worker subagents that follow `unity-agent-worker`, keep one agent at a time on the editor,
+  review what comes back, and close with a report and a draft PR file per
   task. Work happens in the user's own checkout — no worktree per worker — so writers run one
   at a time. Workers write the game code; a handful of mechanical edits you may do inline.
-  Nothing is ever pushed. Use when: "/unity-manage-work",
-  "manage this Unity work", "here is a list of Unity tasks, get them done", "delegate these to
-  agents", or the user hands over Unity work and wants it delivered, not investigated.
+  Nothing is ever pushed. Use when: "/unity-manage-work", "manage this Unity work", "here is a
+  list of Unity tasks, get them done", "delegate these to agents", or the user hands over Unity
+  work and wants it delivered, not investigated.
 ---
 
 # Unity manage work
@@ -24,7 +24,7 @@ report + draft PRs**.
 |---|---|
 | `references/worker-brief.md` | Spawning a worker (Step 5). Everything the prompt must carry. |
 | `references/brief-templates.md` | Writing the first brief (Step 5). The common and per-task files. |
-| `references/editor-agent.md` | Any task needs the editor (Step 5a). Runbook, queue rules, prompt. |
+| `references/editor-agent.md` | Only if you choose the optional shared editor agent (Step 5a). |
 | `references/structure-map.md` | The first task is accepted (Step 6). The game's structure map. |
 | `references/closing-out.md` | The first spawn, the first accepted task, and any pause. |
 
@@ -43,7 +43,9 @@ everything below:
   every parallel worker would pay a full asset reimport before doing any work. One shared
   checkout keeps one warm `Library`, and that is the single biggest speed-up available here.
 - **One checkout holds one branch.** Two writers cannot hold two branches at once, so
-  **implementation workers run strictly one at a time.** Never spawn two writers.
+  **implementation workers run one at a time by default.** The one exception is a second writer
+  on the same branch whose files are disjoint from the first's, taking turns on the editor
+  (Step 5a).
 - **Read-only agents may run in parallel** — scouting, research, review. Up to three at once,
   and never while they could be confused for a writer.
 - **Nobody switches branches mid-session.** Not you, not a worker. The branch is cut once in
@@ -185,10 +187,10 @@ Name tiers, not versions; models change faster than this file.
 | Worker, implementation | The strongest model a worker can run, never above your own tier. |
 | Worker, small or mechanical | Same, or one tier below. |
 | Research and review | One tier below yours for a scoped read; your worker tier for a risky task. |
-| Editor agent | Mid tier (Sonnet class). |
+| Editor agent, if used (Step 5a) | Mid tier (Sonnet class). |
 
-The editor agent runs a weak model on purpose: it executes a runbook, it does not reason about
-the project. That only works if **you** hand it exact commands (Step 5a).
+The optional editor agent runs a weak model on purpose: it executes a runbook, it does not
+reason about the project. That only works if **you** hand it exact commands (Step 5a).
 
 Running below the top tier yourself → match your own tier rather than reaching upward; you review every
 returned task and cannot meaningfully review work from a stronger model.
@@ -258,8 +260,8 @@ Read `references/worker-brief.md` and build every prompt from it. The short vers
 - The prompt carries: the task in full, every locked decision verbatim, anchor files to mirror,
   the branch it is on, the baseline (below), the git rules verbatim, "never spawn subagents",
   "never switch branches", and what to report back.
-- **One writer at a time.** Wait for the current worker to finish and pass review before
-  spawning the next.
+- **One writer at a time**, apart from the disjoint-files exception in Step 5a. Wait for the
+  current worker to finish and pass review before spawning the next.
 - **Draft the next brief while a writer runs.** Spawn it once the current task is accepted,
   after adding the latest "Notes from task N" and "Also fix" items. The gap between tasks is then
   a minute, not a brief-writing session.
@@ -276,20 +278,30 @@ A worker without these will chase breakage it did not cause:
 4. **Existing broken references** — the base branch's unresolved-GUID list, so a worker is judged
    only on the ones it added.
 
-Get them from the editor agent's first job (Step 5a) and put them verbatim into every brief and
-into `session-materials/`.
+Take them yourself before the first worker starts, or make them the first worker's first job,
+and put them verbatim into every brief and into `session-materials/`.
 
 **Work out how high the ladder goes before the first worker starts**, and say so in every brief:
 whether the project can run tests, whether it can be smoke-tested in play mode, and whether a
 build is affordable per task. A worker should never have to discover this.
 
-## Step 5a — The editor agent (singleton, queued)
+## Step 5a - The editor, one agent at a time
 
-A Unity project can be held by one editor at a time, and an import is expensive. So editor-backed
-work does not live inside workers — it goes to **one shared editor agent**, spawned lazily, on a
-weak model, and addressed by id for the rest of the session. Read
-`references/editor-agent.md` the first time a worker reports `EDITOR REQUEST — no editor agent
-present`.
+A Unity project can be held by one editor at a time, and an import is expensive. By default the
+**writer drives the editor itself** through the test script in `unity-scene-habits`
+(`references/run-tests.sh`). Copy it into `session-materials/` at kickoff and check its marked
+lines against the editor once, so no worker re-derives them. The one-writer rule already makes
+agents take turns.
+
+- **Parallel is fine while only one agent uses the editor.** A second worker may write C# in
+  files disjoint from the first's while the first runs tests, then take the editor when it is
+  released. They coordinate through a `mkdir` lock, `session-materials/editor.lock`, which the
+  script takes with `--lock`: a bounded wait that exits without running on timeout, released on
+  exit however the run ends. Each worker stages and commits only its own files.
+- **The project's rule wins.** A project `CLAUDE.md` that says who drives the editor, the worker
+  or a dedicated agent, overrides this step.
+- **A shared editor agent is an optional fallback**, for batch mode driven from a weak manager or
+  when the user asks for one. `references/editor-agent.md` has its runbook.
 
 ---
 
@@ -418,16 +430,17 @@ deliverable; the user opens the PRs.
 - You manage; agents implement. Never write game code as the manager beyond the handful of
   mechanical edits Step 5 allows. Branch setup, session files and mechanical housekeeping are
   yours.
-- **No worktree per worker. One checkout, one branch, one writer at a time.** Read-only agents
-  may run in parallel, up to three.
+- **No worktree per worker. One checkout, one branch, one writer per file set, one agent on the
+  editor at a time.** Read-only agents may run in parallel, up to three.
 - **Nobody switches branches, stashes, resets, force-checks-out or deletes a branch.** There is
   no isolated copy.
 - Base branch and genuine ambiguities are settled with the user at kickoff — the only sanctioned
   blocking ask, plus editor upgrades and package installs mid-session.
 - **Subagents never spawn subagents.** Say it in every prompt.
 - **Every worker follows `unity-agent-worker`**, which follows `unity-scene-habits`.
-- **Exactly one editor agent**, weak model, spawned on demand, addressed by id, given a
-  copy-paste runbook. Workers never drive the editor themselves.
+- **The writer drives the editor itself** through the test script, behind the editor lock,
+  unless the project's `CLAUDE.md` says otherwise. A shared editor agent is an optional fallback
+  (Step 5a).
 - Order tasks by the conflict map. Scene-touching tasks are adjacent and ordered; prefabizing
   goes first.
 - **Establish how high the verification ladder goes before any worker starts** — tests or no
