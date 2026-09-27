@@ -4,26 +4,26 @@
 # CHECK against your editor (`unity command --query <name> --detail full`).
 # Why each step exists: connected-editor.md, "Running tests from a worker".
 #
-#   run-tests.sh [--mode EditMode|PlayMode] [--category NAME] [--save-scenes] [--lock DIR] [NAME...]
+#   run-tests.sh [--mode EditMode|PlayMode] [--category NAME] [--save-scenes] [--queue DIR] [NAME...]
 #
 # NAMEs run one after another, since --filter is a substring match and "A|B" matches nothing,
 # so rerunning only the failures is one call. With no NAME and no --category, everything runs.
 # --save-scenes saves open scenes the reload marked dirty; use it only if the project allows it.
-# --lock DIR takes a mkdir lock first, so only one agent drives the editor at a time.
+# --queue DIR waits its turn in a FIFO ticket queue first, for when several agents share the editor.
 # Set UNITY_PROJECT_PATH when several editors are open.
 #
 # Exit: 0 passed, 1 a test failed or nothing ran, 2 preflight failed, 3 the editor stopped
-# answering (likely a modal dialog: stop and ask the user), 4 lock not acquired.
+# answering (likely a modal dialog: stop and ask the user), 4 no turn in the queue.
 
 set -u
 
-MODE=EditMode CATEGORY= SAVE=0 LOCK= NAMES=()
+MODE=EditMode CATEGORY= SAVE=0 QUEUE= TICKET= NAMES=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --mode)        MODE=$2; shift 2 ;;
     --category)    CATEGORY=$2; shift 2 ;;
     --save-scenes) SAVE=1; shift ;;
-    --lock)        LOCK=$2; shift 2 ;;
+    --queue)       QUEUE=$2; shift 2 ;;
     -h|--help)     sed -n '2,16p' "$0"; exit 0 ;;
     *)             NAMES+=("$1"); shift ;;
   esac
@@ -33,7 +33,7 @@ if [ -n "$CATEGORY" ] && [ ${#NAMES[@]} -gt 0 ]; then
 fi
 
 FOCUS_CMD=${FOCUS_CMD-unity command editor_focus}   # CHECK: the name; FOCUS_CMD= turns it off
-LOCK_TRIES=${LOCK_TRIES:-60}     # x 10 s
+QUEUE_TRIES=${QUEUE_TRIES:-60}   # x 10 s
 READY_TRIES=${READY_TRIES:-60}   # x 5 s
 PLAY_TRIES=${PLAY_TRIES:-45}     # x 20 s
 RUN_TIMEOUT=${RUN_TIMEOUT:-600}  # seconds, per EditMode run
@@ -41,9 +41,7 @@ RUN_TIMEOUT=${RUN_TIMEOUT:-600}  # seconds, per EditMode run
 OUT=$(mktemp -d)
 cleanup() {
   rm -rf "$OUT"
-  if [ -n "$LOCK" ] && [ "$(cat "$LOCK/owner" 2>/dev/null)" = "$$" ]; then
-    rm -f "$LOCK/owner" "$LOCK/owner.note"; rmdir "$LOCK"
-  fi
+  if [ -n "$TICKET" ]; then rm -f "$TICKET/owner"; rmdir "$TICKET"; fi
 }
 trap cleanup EXIT
 trap 'exit 130' INT TERM
@@ -139,17 +137,25 @@ wait_ready() {
   done
 }
 
-# 0. The editor lock: bounded wait, never proceeds without it, always released on exit.
-if [ -n "$LOCK" ]; then
+# 0. The editor queue: take the next numbered ticket (mkdir is atomic), wait until it is the
+# lowest, bounded, and never proceed without the turn. The ticket is released on exit.
+if [ -n "$QUEUE" ]; then
+  mkdir -p "$QUEUE"
   n=0
-  until mkdir "$LOCK" 2>/dev/null; do
+  until [ -n "$TICKET" ]; do
+    last=$(ls "$QUEUE" | sort -n | tail -1)
+    next=$(( ${last:-0} + 1 ))
+    mkdir "$QUEUE/$next" 2>/dev/null && TICKET=$QUEUE/$next
+    n=$((n + 1)); [ -z "$TICKET" ] && [ $n -ge 20 ] && die 4 "could not take a ticket in $QUEUE"
+  done
+  echo "${AGENT_NAME:-pid $$} since $(date +%H:%M:%S)" > "$TICKET/owner"
+  n=0
+  while first=$(ls "$QUEUE" | sort -n | head -1); [ "$first" != "$next" ]; do
     n=$((n + 1))
-    [ $n -ge "$LOCK_TRIES" ] &&
-      die 4 "editor lock $LOCK still held by $(cat "$LOCK/owner.note" 2>/dev/null || echo unknown); not running"
+    [ $n -ge "$QUEUE_TRIES" ] &&
+      die 4 "editor queue: ticket $first ($(cat "$QUEUE/$first/owner" 2>/dev/null || echo unknown)) still ahead; not running"
     sleep 10
   done
-  echo "$$" > "$LOCK/owner"
-  echo "${AGENT_NAME:-pid $$} since $(date +%H:%M:%S)" > "$LOCK/owner.note"
 fi
 
 # 1. Pick up changed scripts and compile them with focus: an unfocused editor stalls.

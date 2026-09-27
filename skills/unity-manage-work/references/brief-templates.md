@@ -38,7 +38,7 @@ signed off together at the end)>
 ## Editor
 Path: <connected or batch>. Who drives it: <you, through the test script / the project's rule>.
 Test script: `session-materials/run-tests.sh`. Compile check outside the editor: <the recorded
-command, or none>.
+command, or none>. Speed mode: <off, or on with queue `session-materials/editor-queue/`>.
 
 ## Report back
 Branch, every file created or edited with full paths, scenes and prefabs touched and why,

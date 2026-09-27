@@ -31,6 +31,10 @@ dotnet build <Project>.sln
 - **It can differ from Unity's own compile**, in defines and analyzers, so the editor compile in
   the editor pass stays the real gate.
 
+A speed-mode worktree (`unity-manage-work`) has no `Library/` and no generated project files.
+Copying the main checkout's project files and pointing the worktree's `Library` at the main
+checkout's is how the check can still run there; that is unproven too, so establish it once.
+
 ## Logic tests outside the editor, optional
 
 Pure logic, such as rules, state, inventory or damage math, in an assembly definition with

@@ -246,6 +246,11 @@ retyping the steps. Each step fixes a failure seen in practice:
 Filter by category where the runner supports it (the template passes `--filter_type category`;
 confirm the parameter names with `unity command --query run_tests --detail full`).
 
+**Several agents on one editor** (speed mode in `unity-manage-work`) queue with `--queue DIR`:
+numbered tickets served in order, a bounded wait that exits without running on timeout, and the
+ticket released on exit however the run ends. A ticket left by a killed agent holds the queue
+until someone removes it. With one writer at a time, no queue is needed.
+
 ## Player builds
 
 Build from the open editor in four steps:

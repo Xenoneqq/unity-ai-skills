@@ -53,7 +53,8 @@ few lines on top of the common brief.
   `git diff -- '*.unity'`. Say so explicitly, so an unexpected scene diff is visibly wrong rather
   than quietly accepted.
 - **Where the test script is** (`session-materials/run-tests.sh`), and the compile check outside
-  the editor if one works in this project.
+  the editor if one works in this project. In speed mode, the lane (files or editor) and the
+  editor queue, `session-materials/editor-queue/`.
 - **The shared-checkout rules, verbatim** (next section).
 - **You must NOT spawn subagents.** Do all the work yourself.
 - KISS: the smallest diff that fully solves the task; do not delete comments or code the task
@@ -79,7 +80,8 @@ few lines on top of the common brief.
 - **Never `git stash`, `reset --hard`, `checkout --force`, or delete a branch.**
 - If the working tree has changes you did not make, **stop and report it**. Do not build on
   someone else's uncommitted work.
-- Leave `session-materials/` alone apart from `screenshots/`; it is not yours.
+- Leave `session-materials/` alone apart from `screenshots/` and the editor queue; it is not
+  yours.
 - **When a command's output decides something**, such as a grep that finds nothing or a count,
   put anything beyond a one-liner in a script file and send the output to a file before reading
   it. Shell hooks can rewrite commands and trim their output, and a missed match looks exactly

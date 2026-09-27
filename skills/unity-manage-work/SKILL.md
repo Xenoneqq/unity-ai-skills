@@ -39,7 +39,8 @@ follow it. You do not need to re-derive it here.
 
 ## Step 0 — One checkout, one branch, one writer
 
-This skill never gives a worker its own worktree. Everything happens in the user's own checkout,
+By default this skill never gives a worker its own worktree; speed mode (Step 5b) is the one
+exception, for files-lane writers only. Everything else happens in the user's own checkout,
 with the session branch checked out. That is a deliberate trade and it sets the rules for
 everything below:
 
@@ -266,8 +267,8 @@ Read `references/worker-brief.md` and build every prompt from it. The short vers
 - The prompt carries: the task in full, every locked decision verbatim, anchor files to mirror,
   the branch it is on, the baseline (below), the git rules verbatim, "never spawn subagents",
   "never switch branches", and what to report back.
-- **One writer at a time.** Wait for the current worker to finish and pass review before
-  spawning the next.
+- **One writer at a time**, outside speed mode (Step 5b). Wait for the current worker to finish
+  and pass review before spawning the next.
 - **Draft the next brief while a writer runs.** Spawn it once the current task is accepted,
   after adding the latest "Notes from task N" and "Also fix" items. The gap between tasks is then
   a minute, not a brief-writing session.
@@ -311,6 +312,24 @@ makes agents take turns.
   or a dedicated agent, overrides this step.
 - **A shared editor agent is an optional fallback**, for batch mode driven from a weak manager or
   when the user asks for one. `references/editor-agent.md` has its runbook.
+
+## Step 5b - Speed mode (opt-in, unproven)
+
+Only when the user asks for speed **and** the tasks provably do not overlap: different folders or
+assembly definitions, no shared scene or prefab, no shared core code. It has not been measured on
+a real session yet; time the first one before relying on it.
+
+- **Up to three files-lane writers in parallel**, each in its own git worktree
+  (`isolation: "worktree"`) on its own task branch. That is safe only because they never open the
+  editor there, so no worktree pays a `Library/` import. Their compile check outside the editor
+  can reuse the main checkout's warm `Library/` (`unity-agent-worker`,
+  `references/files-first.md`).
+- **Integrate in waves.** Merge each finished branch into the session branch in the main checkout,
+  run one editor pass (builders, filtered tests), then start the next wave. Never one big merge
+  at the end.
+- **Editor-lane tasks stay sequential** in the main checkout: anything visual, the NavMesh, feel.
+- **Several agents on the editor** take turns through the test script's FIFO ticket queue
+  (`--queue session-materials/editor-queue`), never through an editor agent.
 
 ---
 
@@ -415,7 +434,8 @@ it.
 **When the user asked for speed** (a game jam, a deadline), skip per-task reviewers and run one
 parallel read-only review over everything at the end, before the report. Batch editor work into
 one combined compile and test run per iteration rather than one per task, and fold small
-follow-ups into the last task instead of opening new ones.
+follow-ups into the last task instead of opening new ones. Parallel writers are speed mode
+(Step 5b), and only when the tasks provably do not overlap.
 
 ---
 
@@ -440,7 +460,8 @@ deliverable; the user opens the PRs.
   mechanical edits Step 5 allows. Branch setup, session files and mechanical housekeeping are
   yours.
 - **No worktree per worker. One checkout, one branch, one writer at a time, one agent on the
-  editor at a time.** Read-only agents may run in parallel, up to three.
+  editor at a time.** Speed mode (Step 5b) is the one opt-in exception, for files-lane writers in
+  worktrees of their own. Read-only agents may run in parallel, up to three.
 - **Nobody switches branches, stashes, resets, force-checks-out or deletes a branch.** There is
   no isolated copy.
 - Base branch and genuine ambiguities are settled with the user at kickoff — the only sanctioned

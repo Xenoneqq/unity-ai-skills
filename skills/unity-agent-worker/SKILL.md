@@ -92,6 +92,8 @@ by one editor, and an import is expensive.
   copy your brief names. It refreshes, recompiles with focus, reloads, checks the editor is ready
   and no scene is dirty, and stops on a modal dialog instead of polling forever.
 - **Exit 3 means stop.** The editor stopped answering, almost always a modal dialog. Report it.
+- **In speed mode your brief may give an editor queue**: pass `--queue <dir>`. The wait is
+  bounded; on exit 4, work on something else, try once more, then report. Never loop on it.
 - **In batch mode** the editor must be closed, and it is one batch run at a time
   (`unity-scene-habits`).
 - **The project's rule wins.** If the project's `CLAUDE.md` says who drives the editor, follow it
