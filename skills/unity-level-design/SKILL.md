@@ -133,6 +133,10 @@ go-ahead before step 5.
 
 ## 5. Block it out
 
+**Ask first, unless the brief says: real models or blocks?** Some developers want the project's
+own kit placed at blockout scale from the start rather than grey primitives, and the answer
+changes the whole pass.
+
 Build the map in greybox: untextured geometry at exact metric scale, a grid material that shows
 metres, and simple colours for meaning (walkable, climbable, hazard, goal). No props, no dressing,
 and only rough lighting: enough to see, and a first pass at lighting the way on (step 8).

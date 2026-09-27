@@ -20,6 +20,10 @@ You do not write game code, apart from a handful of mechanical edits (Step 5).
 Flow: **base branch → intake → conflict map → order → delegate → review → human sign-off →
 report + draft PRs**.
 
+**Work already done?** When the work was done inline and this skill is invoked afterwards, skip
+kickoff and planning. Run only the tests (Step 4b), the commits, the sign-off (Step 6a) and the
+draft PR (Step 7).
+
 | File | Read it when |
 |---|---|
 | `references/worker-brief.md` | Spawning a worker (Step 5). Everything the prompt must carry. |
@@ -112,6 +116,7 @@ ps -Ao pid,args | grep -i '[-]projectpath' | grep -F "$ROOT"   # [-] stops grep 
    - **A task about how UI looks**, not only what it does ("make the UI look good", "design the
      HUD"), goes through `unity-ui-design`: direction, style plan and a mockup the user approves
      come before any implementation task. A function-only UI task does not need it.
+   - **A greybox or blockout** gets one kickoff question: real models or blocks?
 4. Resolve open decisions **now**. Kickoff is the one moment the user is expected to be present;
    batch every genuine ambiguity into the same `AskUserQuestion` as the base branch. Capture
    answers verbatim — they go into worker prompts.
@@ -265,6 +270,11 @@ Read `references/worker-brief.md` and build every prompt from it. The short vers
 - **Draft the next brief while a writer runs.** Spawn it once the current task is accepted,
   after adding the latest "Notes from task N" and "Also fix" items. The gap between tasks is then
   a minute, not a brief-writing session.
+
+**Talking to running workers.** A follow-up on files a running worker owns goes to that worker
+with `SendMessage`, not to a new agent; it keeps its context. A worker that ends its turn to wait
+sends an interim report, which is expected, not a failure. If a message got no reply, check
+`ListAgents` to see whether it resumed the recipient, and send it again.
 
 ### The baseline, before any worker starts
 
