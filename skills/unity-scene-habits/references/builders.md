@@ -24,6 +24,13 @@ rerun after someone else's change.
 - **Re-bake into the existing data asset** (navmesh, lighting, anything with a `.asset` output)
   rather than deleting it and making a new one. Same GUID problem.
 - **Create only what is missing.** Look up an object by name or component before adding it.
+- **Skip writing what has not changed.** Compare the new content with what is on disk (the bytes
+  of a texture, the `EditorJsonUtility.ToJson` of an asset) and leave the asset alone when they
+  match. Saving it anyway re-serializes it, which can churn an animator controller's fileIDs or
+  reassign an icon, and the rerun is no longer neutral.
+- **Take a scope.** A builder that builds many areas accepts which one to build, as a
+  `[CliArg]` or a command-line flag, and builds everything only when given none. Parallel
+  workers and merges then each rebuild only their own area.
 - **Verify only what the builder owns.** A check like "the scene has exactly one camera" breaks
   the day another builder adds a second. Check your own objects.
 - **Enforce order in code.** If one builder needs another's output, it checks for it and fails

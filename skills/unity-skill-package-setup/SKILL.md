@@ -158,6 +158,25 @@ Do both in the same closed window so the user closes the editor once. `unity-sce
 `com.unity.probuilder`. A declined offer is fine: the level skill falls back to primitives.
 Record the answer, and Pipeline's, in the generated `CLAUDE.md`, so no later skill asks again.
 
+### A PlayMode test assembly
+
+End-to-end PlayMode tests driven through the game's public API beat the ad-hoc play-tests
+through `eval` that every worker otherwise rewrites. Check whether the project has one:
+
+```bash
+find "$ROOT/Assets" -name '*.asmdef' -not -path '*/ThirdParty/*' -print0 |
+  while IFS= read -r -d '' f; do
+    grep -qE 'UNITY_INCLUDE_TESTS|TestAssemblies' "$f" || continue
+    grep -q '"Editor"' "$f" && echo "EditMode tests: $f" || echo "PlayMode tests: $f"
+  done
+```
+
+If there is none, offer one in the same question as the packages. Its tests can only reference
+game code that lives in an assembly definition of its own. When the code is not in one yet,
+moving it is a task for the backlog (Step 2), not a setup step, so offer the test assembly as
+part of that task. Real input and game feel stay manual checks either way. `unity-coding-habits`
+has how to write the tests.
+
 ## 6. Scaffold the asset folders
 
 Read `references/folder-scaffold.md` for the default tree, what each folder is for, and the
@@ -220,6 +239,9 @@ Read `references/project-memory.md` for the content. In short, the generated `CL
   `unity-manage-work` before starting, and only proceed directly if they decline.
 - The project's own hard rules: prefab-first, never hand-edit `.unity`/`.prefab`/`.meta`, every
   asset committed with its meta, and a pointer to `STRUCTURE.md` for where things go.
+- **Who drives the editor** (the agent doing the task, by default) and **whether agents may save
+  the open scene** through the editor. Ask the user both; the test runs in `unity-scene-habits`
+  depend on the second.
 
 `AGENTS.md` covers the same ground for tools that read that filename instead. Write it as a short
 file that points at `CLAUDE.md` rather than duplicating it — two copies of the same rules drift.
@@ -237,7 +259,7 @@ Then tell the user, in this order:
    set to Force Text, `UserSettings/` committed, a missing editor version, no licence.
 2. What you created, and what you left alone because it already existed. Say whether the
    Pipeline package went in, was already there, or was skipped and why, and the same for
-   ProBuilder.
+   ProBuilder and the PlayMode test assembly.
 3. **The backlog from the scan** — the real work the project needs, ordered, and the offer to run
    it through `unity-manage-work`.
 4. That nothing is committed. Suggest it as its own commit — setup is not a feature change and

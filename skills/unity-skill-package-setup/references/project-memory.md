@@ -57,7 +57,13 @@ pointing at a skill nobody has installed sends the reader nowhere.
   runs: no saving scenes or prefabs, no Play mode. Never change a scene or prefab on disk that
   the editor has open.
 - **Tests** — whether this project has any at all. It decides how far verification can go and
-  what a report is allowed to claim.
+  what a report is allowed to claim. Say whether a PlayMode test assembly exists or was declined.
+- **Who drives the editor**: the agent doing the task, through the test script, one agent at a
+  time, unless this project wants a dedicated editor agent. This line overrides the skills'
+  default.
+- **Saving the open scene**: whether agents may save it through the editor. A test run's reload
+  marks the scene dirty, and a dirty scene makes the run open a modal save dialog; without
+  permission, agents stop and ask.
 - **Packages settled at setup** — Pipeline and ProBuilder: installed, already there, or declined.
   A declined package is not offered again.
 

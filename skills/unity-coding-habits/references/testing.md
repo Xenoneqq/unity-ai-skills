@@ -39,6 +39,46 @@ Set `Time.captureDeltaTime = 1f / 60f` in the fixture's setup and back to `0` in
 Every frame then advances exactly one sixtieth of a second however fast the machine runs, so a
 test that waits 60 frames has simulated one second every time.
 
+## Test speed
+
+Fades, black pauses, cutscene clips and timers make a suite slow for no reason a test cares
+about. Two switches take most of it out; on one project they cut the same 24 tests from 254 s to
+70 s.
+
+**One presentation speed switch.** A static that game code reads for fades, black pauses and
+clip playback, default 1. These often run on unscaled time, which `Time.timeScale` does not
+touch. Reset it on every Play mode entry, because Enter Play Mode Options keep statics:
+
+```csharp
+public static class PresentationSpeed
+{
+    public static float Multiplier = 1f;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void Reset() => Multiplier = 1f;
+}
+```
+
+**The test base speeds both up and puts them back:**
+
+```csharp
+[SetUp]    public void SpeedUp() { Time.timeScale = 4f; PresentationSpeed.Multiplier = 10f; }
+[TearDown] public void Restore() { Time.timeScale = 1f; PresentationSpeed.Multiplier = 1f; }
+```
+
+- **Assert durations in game time** (`Time.time`), so they hold at any scale.
+- **Keep one real-time test per timed feature**, such as a cutscene, an animation clip or a
+  transition, run at normal speed, so the speed-up never hides a timing bug.
+- **Never raise the time scale past what the fastest sampled check can take.** A sight or
+  reaction check sampled at intervals can be skipped over, and the test passes when it should
+  fail.
+
+Fixed frame time and time scale answer different questions. `Time.captureDeltaTime` makes a test
+deterministic: every frame is the same length on any machine. Time scale makes it fast: more
+game time per frame. Use fixed frame time for movement, physics and anything that counts frames;
+add time scale to cut the waiting in longer flows. When a test needs both, set and restore both
+in the same SetUp and TearDown.
+
 ## Leave nothing behind
 
 `Destroy` is deferred to the end of the frame, so objects a teardown destroys are still there,
