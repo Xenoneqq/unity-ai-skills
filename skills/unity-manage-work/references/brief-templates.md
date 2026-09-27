@@ -59,8 +59,12 @@ verification results with output, anything deviated from, discovered or left und
 ## Anchor files
 <path: what it demonstrates>
 
+## Skim
+<doc sections worth reading, by file and heading; never "read everything">
+
 ## Tests
-<what each deliverable is proven by; screenshot tests for anything visual>
+<what each deliverable is proven by; screenshot tests only for real visual work; new tests
+only for new behaviour>
 
 ## Notes from task <N-1>
 <what this worker must know: layers or tags added, API shapes, which test areas are taken,

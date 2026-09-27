@@ -249,7 +249,7 @@ Unity's, so capture it before piping.
 **The change is actually in the asset.** Reopen it and assert, in the task script or a second
 run. A `SaveAsPrefabAsset` that silently no-ops looks identical to one that worked.
 
-**It looks right, if it is visual.** Render it to a PNG in a PlayMode test and open the PNG;
+**It looks right, if it is real visual work.** Render it to a PNG in a PlayMode test and open the PNG;
 [references/visual-checks.md](references/visual-checks.md) has the recipe.
 
 **Every asset has its meta, and every meta its asset:**

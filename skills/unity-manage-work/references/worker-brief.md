@@ -18,6 +18,11 @@ supplies what it cannot know and pre-answers what it would otherwise stop on.
 
 ## What every prompt must contain
 
+**Keep it short.** The task, the locked decisions, the files to touch and which doc sections to
+skim, by heading. Never "read X, Y and every skill in full": the worker reads the project's
+CLAUDE.md anyway, and its skill says what else it needs. A quick-path task (Step 5) needs a
+few lines on top of the common brief.
+
 - **Repo path**, **the branch it is on** (already created — it does not cut one), and "read the
   project's CLAUDE.md / AGENTS.md / contributor notes and follow them exactly; they outrank every
   skill."
@@ -59,9 +64,11 @@ supplies what it cannot know and pre-answers what it would otherwise stop on.
 
 - You are working in the user's own checkout. There is no worktree and no isolated copy, so
   there is nothing to recover from if you destroy something.
-- **Anything visual ships with a screenshot test** (`unity-scene-habits`,
-  `references/visual-checks.md`). Write the PNGs to `session-materials/screenshots/task<N>/`, the
-  one place in `session-materials/` you may write. The manager opens every one.
+- **Screenshots only when the brief asks, or for real visual work**: new UI, lighting, a look the
+  user will judge (`unity-scene-habits`, `references/visual-checks.md`). Never to show that an
+  object is there; an existing test's raycast or bounds assert says that for free. Write the
+  PNGs to `session-materials/screenshots/task<N>/`, the one place in `session-materials/` you
+  may write. The manager opens every one.
 - **Stay on the branch named in this brief.** Do not create, rename, switch or delete a branch.
 - **Never `git stash`, `reset --hard`, `checkout --force`, or delete a branch.**
 - If the working tree has changes you did not make, **stop and report it**. Do not build on

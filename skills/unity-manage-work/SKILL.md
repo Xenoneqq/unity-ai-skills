@@ -6,7 +6,8 @@ description: >
   worker subagents that follow `unity-agent-worker`, route all editor-backed work through one
   shared editor agent, review what comes back, and close with a report and a draft PR file per
   task. Work happens in the user's own checkout — no worktree per worker — so writers run one
-  at a time. You never write game code yourself. Nothing is ever pushed. Use when: "/unity-manage-work",
+  at a time. Workers write the game code; a handful of mechanical edits you may do inline.
+  Nothing is ever pushed. Use when: "/unity-manage-work",
   "manage this Unity work", "here is a list of Unity tasks, get them done", "delegate these to
   agents", or the user hands over Unity work and wants it delivered, not investigated.
 ---
@@ -14,7 +15,7 @@ description: >
 # Unity manage work
 
 You are the **MANAGER**. Planning, delegation, quality gating, reporting. Workers implement.
-You do not write game code.
+You do not write game code, apart from a handful of mechanical edits (Step 5).
 
 Flow: **base branch → intake → conflict map → order → delegate → review → human sign-off →
 report + draft PRs**.
@@ -116,7 +117,8 @@ ps -Ao pid,args | grep -i '[-]projectpath' | grep -F "$ROOT"   # [-] stops grep 
    get exact anchor files: where prefabs live, which assembly definitions exist, what the
    managers are called, which scenes are the contested ones.
 
-Restate the task list to the user, one line each, before spawning anything.
+Restate the task list to the user before spawning anything: one line each, with a rough time
+estimate per task, so the user can cut scope before work starts.
 
 ---
 
@@ -237,6 +239,11 @@ resends the agent's whole conversation, so long workers and a long-lived manager
 
 ## Step 5 — Spawn the worker
 
+**Size the process to the task first.** A handful of mechanical edits (swap a model, delete or
+move an object, flip a field) does not need a worker. Do them inline yourself on the quick path
+of `unity-agent-worker`, or hand them all to one worker with a very short brief. Workers are for
+real features: a new mechanic, a new system, risky code.
+
 Read `references/worker-brief.md` and build every prompt from it. The short version:
 
 - Agent tool, `subagent_type: "general-purpose"`, model from Step 4. **No `isolation`** — the
@@ -341,7 +348,8 @@ tasks:
 
 - **Tests are the acceptance gate.** Every deliverable has a test that fails if the behaviour
   breaks, driven through test seams and deterministic.
-- **Anything visual has a screenshot test,** and you open every PNG yourself
+- **Real visual work has a screenshot test** (new UI, lighting, a look someone will judge), and
+  you open every PNG yourself
   (`unity-scene-habits`, `references/visual-checks.md`).
 - **A separate reviewer on every task that changes behaviour,** since no person looks.
 - **Draft PRs and the report say plainly that nobody signed off,** and keep the manual checklist
@@ -362,8 +370,10 @@ A **SHOULD-FIX** on a task that already passed does not reopen it. It goes into 
 that touches those files, under "Also fix (from task N review)", and that worker adds tests for
 it.
 
-**When the user asked for speed** (a game jam, a deadline), skip per-task reviewers. Run one now
-and then as a last look over everything since the previous one, and once before the report.
+**When the user asked for speed** (a game jam, a deadline), skip per-task reviewers and run one
+parallel read-only review over everything at the end, before the report. Batch editor work into
+one combined compile and test run per iteration rather than one per task, and fold small
+follow-ups into the last task instead of opening new ones.
 
 ---
 
@@ -384,8 +394,9 @@ deliverable; the user opens the PRs.
 
 ## Rules
 
-- You manage; agents implement. Never write game code as the manager — branch setup, session
-  files and mechanical housekeeping are yours.
+- You manage; agents implement. Never write game code as the manager beyond the handful of
+  mechanical edits Step 5 allows. Branch setup, session files and mechanical housekeeping are
+  yours.
 - **No worktree per worker. One checkout, one branch, one writer at a time.** Read-only agents
   may run in parallel, up to three.
 - **Nobody switches branches, stashes, resets, force-checks-out or deletes a branch.** There is
@@ -409,3 +420,4 @@ deliverable; the user opens the PRs.
 - **Never push, never open a remote PR — manager included.**
 - Good enough is done: two fix rounds, a third only if clearly converging.
 - Don't spawn an agent for work cheaper done inline; don't do work inline that a worker should own.
+  A handful of mechanical edits is cheaper inline; a feature belongs to a worker.

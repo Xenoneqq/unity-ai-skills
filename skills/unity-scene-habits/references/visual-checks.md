@@ -2,8 +2,9 @@
 
 A test proves a rule holds. It cannot tell you a pose looks awkward, a sprite is unreadable or a
 light is off. A screenshot can, and when no human is checking the work it is the best evidence
-there is. Anything visual ships with a PlayMode test that renders it to a PNG, and someone looks
-at the PNG.
+there is. Real visual work (new UI, lighting, a look someone will judge) ships with a PlayMode
+test that renders it to a PNG, and someone looks at the PNG. Checking that an object is there is
+not visual work: a raycast or bounds assert says that for free.
 
 ## Rendering headless
 

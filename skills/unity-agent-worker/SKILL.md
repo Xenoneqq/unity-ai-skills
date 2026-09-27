@@ -17,6 +17,24 @@ and you do not spawn subagents.
 If a manager spawned you, it locked the branch, the decisions and the baseline. Treat that brief
 as authoritative and report to the manager, never to the user.
 
+## Size the process to the task
+
+A small, clear change does not need the full process below. Take the **quick path** when all of
+these hold:
+
+- It changes content or data, not behaviour: swap a model, delete or move an object, flip a
+  serialized field, retune a number.
+- It touches a handful of existing files and adds no new script.
+- The brief says exactly what to change. Nothing is left to design.
+
+The quick path: read the project's `CLAUDE.md`, make the edit, run one existing test that covers
+the area if there is one, run the rung-0 checks from section 5 (every asset paired with its
+`.meta`, the scene diff intended), and commit. If nothing automated covers it, add a one-line
+manual check to your report. No milestones, no screenshots, no new tests, no reading every skill.
+
+A new mechanic, a new system, or risky code such as the player controller or the save system
+takes the full process. If a quick task turns out to need new code, switch to it and say so.
+
 ## 1. Read before you write
 
 In this order, stopping as soon as you have what you need:
@@ -24,7 +42,8 @@ In this order, stopping as soon as you have what you need:
 1. The project's own rules — `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, contributor notes.
    **These outrank this skill and every skill it references.**
 2. The anchor files you were given, or the nearest equivalents. Mirror what is already there:
-   folder layout, naming, assembly definitions, how existing prefabs are built.
+   folder layout, naming, assembly definitions, how existing prefabs are built. Where the brief
+   names doc sections to skim, read those sections, not the whole file.
 3. `unity-scene-habits` — the engine mechanics. Everything you do to a prefab, a scene, an asset
    or the editor CLI follows it. Do not re-derive it and do not work around it.
 
@@ -103,6 +122,13 @@ done
 - **The scene diff is intended.** `git diff --stat -- '*.unity'` should be empty unless the task
   genuinely needed a scene change. If it is not and you did not mean it, revert the whole file —
   not partial hunks — before committing.
+
+**Screenshots only when asked, or for real visual work**: new UI, lighting, a look the user will
+judge (`unity-scene-habits`, `references/visual-checks.md`). Never to show that an object is
+there; an existing test's raycast or bounds assert says the same for free.
+
+**New tests only for new behaviour.** Swapping or deleting content updates the existing tests
+that name the old thing. It does not add tests.
 
 **Rungs 2 and 3 run once, when the task is otherwise done**: does the game start, and does it
 build. Both need the editor, so both go through the editor agent. They are slow; do not run them
