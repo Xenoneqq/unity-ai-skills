@@ -23,6 +23,10 @@ and whether a person signed the behaviour off or it waits in the combined sign-o
 the session (Step 6a). Never write "tested" or "verified" for a project with
 no tests; say what was checked and what was not.
 
+One draft per task on a single session branch, covering its commit range; with stacked
+branches, one per branch, its base the previous task's branch, and the report says the user
+merges them in order.
+
 Follow the project's own PR template and contributing rules where it has them; a plain
 Summary-and-Changes body where it does not.
 
@@ -75,9 +79,9 @@ leave everything a new session needs on disk.
 
 1. **Stop the writer.** Then check `git status` and report what it left uncommitted. Never stash
    it or clean it up; the user decides.
-2. **Write `session-materials/RESUME.md`**: HEAD, the tasks accepted so far, the task in progress
-   and which brief to respawn its worker from, the editor path in use (connected or batch, editor
-   open or closed), and, if an editor agent was used, a note that it must be respawned.
+2. **Write `session-materials/RESUME.md`**: HEAD, the branch mode and current branch, the tasks
+   accepted so far, the task in progress and which brief to respawn its worker from, the editor
+   path in use (connected or batch, editor open or closed), and, if an editor agent was used, a note that it must be respawned.
 3. **On resume**, remove stale tickets from `session-materials/editor-queue/` if speed mode was
    on, now that no agent is running, and run an import check. If an editor agent was used,
    respawn it from `editor-agent-prompt.md` and put its new id in `brief-common.md`. Ask the

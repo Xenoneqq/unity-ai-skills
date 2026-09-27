@@ -54,8 +54,8 @@ everything below:
   a message, a merge) is a new way to fail, and each task should start from a verified base.
 - **Read-only agents may run in parallel** — scouting, research, review. Up to three at once,
   and never while they could be confused for a writer.
-- **Nobody switches branches mid-session.** Not you, not a worker. The branch is cut once in
-  Step 0 and everything lands on it.
+- **Nobody switches branches mid-session.** Not you, not a worker. Branches are cut only by you,
+  per the branch mode below, and never by checking out another base.
 - **Never `stash`, `reset --hard`, `checkout --force`, or delete a branch.** There is no
   isolated copy to fall back on. The user's working tree is the only one.
 - **One long-lived second checkout is fine** when the user wants their editor free: a viewer
@@ -72,7 +72,18 @@ git status --short
 ```
 
 2. Ask with `AskUserQuestion`: the current branch (recommended), two or three plausible others
-   by recency and naming, or Other.
+   by recency and naming, or Other. In the same question, ask the **branch mode**:
+   - **One session branch** for the whole body of work (recommended for tightly coupled work).
+     One draft PR per task, each covering its commit range.
+   - **Stacked branches, one per task or milestone**, for separate reviewable PRs. You cut each
+     next branch between tasks, on a clean tree, with `git checkout -b <task-slug>` at the
+     previous task's accepted HEAD. That changes nothing on disk, so an open editor sees no
+     reimport and no "changed on disk" dialog. Never cut a later branch back off the base
+     mid-session: it rewrites files under the open editor and drops the verified base. The user
+     merges them in order, task 1's PR first; if an earlier PR changes in review, rebasing the
+     later ones is their call.
+
+   Speed mode (Step 5b) needs a branch per task anyway, one per worktree.
 3. **The working tree must be clean before you cut the branch.** If it is dirty, show what is
    uncommitted and let the user decide. Never clean it yourself.
 4. **Settle the editor.** Check whether one has the project open. Check both the lock and a
@@ -105,7 +116,8 @@ ps -Ao pid,args | grep -i '[-]projectpath' | grep -F "$ROOT"   # [-] stops grep 
      clone (above) lets the user watch anyway.
 
    Install the package only now or between tasks, never while a worker runs.
-5. Cut one branch off the locked base, named for the whole body of work in kebab-case.
+5. Cut the first branch off the locked base in kebab-case, named for the whole body of work or,
+   with stacked branches, for the first task.
 
 ---
 
@@ -320,9 +332,9 @@ assembly definitions, no shared scene or prefab, no shared core code. It has not
 a real session yet; time the first one before relying on it.
 
 - **Up to three files-lane writers in parallel**, each in its own git worktree
-  (`isolation: "worktree"`) on its own task branch. That is safe only because they never open the
-  editor there, so no worktree pays a `Library/` import. Their compile check outside the editor
-  can reuse the main checkout's warm `Library/` (`unity-agent-worker`,
+  (`isolation: "worktree"`, required) on its own task branch. That is safe only because they
+  never open the editor there, so no worktree pays a `Library/` import. Their compile check
+  outside the editor can reuse the main checkout's warm `Library/` (`unity-agent-worker`,
   `references/files-first.md`).
 - **Integrate in waves.** Merge each finished branch into the session branch in the main checkout,
   run one editor pass (builders, filtered tests), then start the next wave. Never one big merge
@@ -463,7 +475,9 @@ deliverable; the user opens the PRs.
   editor at a time.** Speed mode (Step 5b) is the one opt-in exception, for files-lane writers in
   worktrees of their own. Read-only agents may run in parallel, up to three.
 - **Nobody switches branches, stashes, resets, force-checks-out or deletes a branch.** There is
-  no isolated copy.
+  no isolated copy. Only you cut a branch: one session branch, or stacked ones at HEAD between
+  tasks (Step 0).
+- **The user pushes and merges into main.** Agents never do, whichever branch mode.
 - Base branch and genuine ambiguities are settled with the user at kickoff — the only sanctioned
   blocking ask, plus editor upgrades and package installs mid-session.
 - **Subagents never spawn subagents.** Say it in every prompt.
