@@ -190,8 +190,9 @@ unity command console_status                 # pass: compilationFailed false, co
 unity command console --level error --tail 40
 ```
 
-Never poll `EditorApplication.isCompiling` through `eval`; it reports `true` for as long as the
-compile is stalled.
+Never poll `EditorApplication.isCompiling` through `eval` while the editor is unfocused; it
+reports `true` for as long as the compile is stalled. Once a focused recompile has completed, it
+is a valid final readiness check (Running tests from a worker, below), never a loop to wait on.
 
 ## Running tests
 
@@ -213,6 +214,43 @@ unity command list_tests
 - **`--filter`** is a substring match, not a regex: `"A|B"` matches nothing.
 - **Audio** plays through the user's speakers here, unlike batch mode. Test assemblies mute it for
   the whole run and restore it after (`unity-coding-habits`).
+
+## Running tests from a worker
+
+A bare `run_tests` from an agent fails in quiet ways: it runs stale code, reports zero tests, or
+freezes the editor behind a dialog. [run-tests.sh](run-tests.sh) is a template that does the
+preflight below in one call. Copy it into the project once (under `unity-manage-work`, into
+`session-materials/`), check its `CHECK` lines against your editor, and run it rather than
+retyping the steps. Each step fixes a failure seen in practice:
+
+1. **Refresh, then recompile with focus.** Run `AssetDatabase.Refresh` through `eval`, then
+   `recompile --focus true` and poll `recompile_status`. The runner does not pick up changed
+   `.cs` files on its own.
+2. **Request a script reload** (`EditorUtility.RequestScriptReload` through `eval`) before every
+   run. The runner starts once per domain; a second run in the same domain reports nothing.
+3. **Gate on readiness.** Proceed only when `EditorApplication.isCompiling` and
+   `EditorApplication.isUpdating` are both false. Never use CPU load as a readiness signal: a
+   focused editor on a heavy render pipeline may never drop below 20%.
+4. **No dirty scene.** The reload marks the open scene dirty without changing it, and a dirty
+   scene makes `run_tests` open a modal save dialog that freezes the editor. Save it, if the
+   project's `CLAUDE.md` allows agents to save the open scene, and check `isDirty` is false; if it
+   does not, stop and report. The rung-0 scene diff check still applies afterwards.
+5. **Keep focus while polling.** Play mode and tests only advance while the editor has focus.
+6. **An instant `total 0` from a filtered run is a failure**, not a pass. Reload and rerun once,
+   then report.
+7. **A main-thread timeout means stop.** It is almost always a modal dialog. Report it; never
+   keep polling.
+8. **Several names in one call.** `--filter` is a substring match and `"A|B"` matches nothing, so
+   the script loops over the names it is given. Rerunning only the failures is one call.
+
+Filter by category where the runner supports it (the template passes `--filter_type category`;
+confirm the parameter names with `unity command --query run_tests --detail full`).
+
+**One agent on the editor at a time.** `--lock DIR` takes a `mkdir` lock before anything else,
+waits a bounded time, exits without running if it never gets it, and always releases it on exit.
+Another agent can meanwhile write C#, since the editor does not pick up `.cs` files until
+someone refreshes. The holder's step 1 does refresh, so the other agent keeps its files compiling
+at every save, or the holder's run breaks on them.
 
 ## Player builds
 

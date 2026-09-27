@@ -141,7 +141,8 @@ entering Play mode. Spend runs deliberately:
 - **Code first, tests after.** Write the whole change, or the whole batch of small tasks, then
   run tests once over it. Never edit, test, edit, test per task.
 - **Filter while working.** Run only the tests for what changed, by category or by name.
-- **Rerun only what failed**, by name, in one call.
+- **Rerun only what failed**, by name, in one call: `unity-scene-habits`' `references/run-tests.sh`
+  takes several names.
 - **The full suite once**, right before your final commit, unless your brief says it runs at the
   end of the session instead. A change to shared core code (the player controller, the save
   system, anything many features depend on) earns its own full run, so a late red suite can
