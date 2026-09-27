@@ -6,7 +6,7 @@ written per task. The worker prompt itself is then about ten lines: invoke `unit
 read both files, follow them.
 
 Patch `brief-common.md` whenever the environment changes: unattended mode switched on, the editor
-opened or closed, Pipeline installed, a parallel worker started. A task brief that contradicts
+opened or closed, Pipeline installed, the editor agent respawned. A task brief that contradicts
 a stale common brief leaves the worker guessing which one is current.
 
 ## `brief-common.md`
@@ -37,8 +37,8 @@ signed off together at the end)>
 
 ## Editor
 Path: <connected or batch>. Who drives it: <you, through the test script / the project's rule>.
-Test script: `session-materials/run-tests.sh`. Lock: `session-materials/editor.lock`.
-Parallel worker: <name and the files it owns, if any>.
+Test script: `session-materials/run-tests.sh`. Compile check outside the editor: <the recorded
+command, or none>.
 
 ## Report back
 Branch, every file created or edited with full paths, scenes and prefabs touched and why,

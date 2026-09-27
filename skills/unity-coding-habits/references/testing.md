@@ -33,6 +33,15 @@ The Input System's own `InputTestFixture` fakes devices instead. It needs the pa
 `testables` in `Packages/manifest.json`, which is a manifest change, so it is the user's call.
 The seam needs nothing.
 
+## Logic tests outside the editor
+
+Pure rules with no engine types, such as damage math, inventory or a state machine, can live in
+an assembly definition with `noEngineReferences` set. A plain test project outside `Assets/` that
+compiles the same source files with NUnit then runs them with `dotnet test` in seconds, with no
+editor and no domain reload. A pattern to adopt where the logic already separates cleanly, not a
+requirement. Keep the tests runnable in the editor's Test Runner too, so the full run still
+covers them.
+
 ## Fixed frame time
 
 Set `Time.captureDeltaTime = 1f / 60f` in the fixture's setup and back to `0` in its teardown.

@@ -78,8 +78,7 @@ leave everything a new session needs on disk.
 2. **Write `session-materials/RESUME.md`**: HEAD, the tasks accepted so far, the task in progress
    and which brief to respawn its worker from, the editor path in use (connected or batch, editor
    open or closed), and, if an editor agent was used, a note that it must be respawned.
-3. **On resume**, remove a stale `session-materials/editor.lock` now that no agent is running,
-   and run an import check. If an editor agent was used, respawn it from
+3. **On resume**, run an import check. If an editor agent was used, respawn it from
    `editor-agent-prompt.md` and put its new id in `brief-common.md`. Ask the editor question
    from Step 0 again, since the user's setup may have changed, and patch `brief-common.md` to
    match.

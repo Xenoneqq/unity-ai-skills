@@ -187,7 +187,9 @@ licensing failure and how to read the log.
 Code that generates assets the project commits is not throwaway, so it does not live there. It
 goes in committed builders that rerun without changing anything;
 [references/builders.md](references/builders.md) has the rules, the changes the editor makes on
-its own, and when a setting needs a test instead of a convention.
+its own, and when a setting needs a test instead of a convention. Workers write scene and prefab
+changes as builders first and run them in one editor pass per task (`unity-agent-worker`,
+`references/files-first.md`).
 
 Edit prefab assets directly — never by dragging an instance into a scene and applying overrides.
 `PrefabUtility.EditPrefabContentsScope` opens a prefab asset, lets you change it, and saves it,

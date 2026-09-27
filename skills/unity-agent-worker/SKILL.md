@@ -3,8 +3,7 @@ name: unity-agent-worker
 description: >
   Carry one Unity task end to end in the user's own checkout: read the project's rules first,
   work in verifiable milestones, do all engine work through `unity-scene-habits` (prefab-first,
-  editor CLI, never hand-edit YAML), drive editor runs itself with one agent on the editor at a
-  time, keep
+  editor CLI, never hand-edit YAML), work in files first and use the editor in one pass, keep
   every new asset paired with its `.meta`, verify before every commit, and never push or switch
   branches. Use when handed a single Unity task to implement — by a user, or as a worker spawned
   by `unity-manage-work`.
@@ -50,7 +49,9 @@ In this order, stopping as soon as you have what you need:
 
 ## 2. You are in a shared checkout
 
-There is no worktree and no isolated copy. The tree you are editing is the user's own.
+There is no worktree and no isolated copy. The tree you are editing is the user's own. The one
+exception is a speed-mode files-lane task (`unity-manage-work`), which runs in a worktree of its
+own: never open the editor there.
 
 - **Stay on the branch you were given.** Never `checkout` another branch, never create one,
   never rename one.
@@ -58,38 +59,38 @@ There is no worktree and no isolated copy. The tree you are editing is the user'
   to recover from.
 - **Stay inside your file set.** If the task needs a file nobody mentioned, that is a finding to
   report, not a licence to spread.
-- **Leave `session-materials/` alone**, apart from the editor lock and anything your brief lets
-  you write there. It is the manager's.
+- **Leave `session-materials/` alone**, apart from anything your brief lets you write there. It
+  is the manager's.
 - If the working tree contains changes you did not make, stop and report it. Do not build on top
-  of someone else's uncommitted work. The exception is a parallel worker your brief names: its
-  files are expected, and you stage and commit only your own, by path.
+  of someone else's uncommitted work.
 
 ## 3. Work in milestones
 
-Split the task into chunks that can each be *shown* to work. For each one: make the change, run
-the cheap rung-0 checks (`.meta` pairing, the intended scene diff), then move on. Do not build
-the whole thing and only check it at the end. Editor-backed test runs follow the test budget in
-section 5, not the milestones.
+Split the task into chunks that can each be *shown* to work. For each one: make the change, check
+it where that is cheap (a compile outside the editor, the intended diff), then move on. Do not
+build the whole thing and only check it at the end. Editor-backed checks, `.meta` pairing and
+test runs among them, happen in the editor pass (section 4), not per milestone.
 
 Prefer the smallest diff that fully solves the task. Do not delete comments or code the task does
 not require you to touch, and do not tidy things nobody asked about.
 
-## 4. Engine work goes through the CLI, and you drive the editor yourself
+## 4. Files first, then one editor pass
 
-Prefab and asset edits you drive yourself, per `unity-scene-habits` — prefab-first, edit prefab
-assets rather than scenes, never hand-edit `.unity`, `.prefab` or `.meta`.
+Most of a task needs no editor. Write it as files: C# as files, and scene, prefab and asset
+changes as builder scripts per `unity-scene-habits` (prefab-first, edit prefab assets rather than
+scenes, never hand-edit `.unity`, `.prefab` or `.meta`). Check the compile outside the editor
+where the project has a recorded way to. Then use the editor **once per task**, or once per batch
+of small tasks: builders, tests and the final compile together. That pass creates the `.meta`
+files for new assets, so commit after it, never before. Visual and feel work is the exception
+and happens in the editor from the start. [references/files-first.md](references/files-first.md)
+has the detail.
 
-Runs that need the editor itself, a test run, a build, an import check, you drive too, but
-**only one agent uses the editor at a time**: one project can be held by one editor, and an
-import is expensive.
+You drive the editor yourself, and **only one agent uses it at a time**: one project can be held
+by one editor, and an import is expensive.
 
 - **Run tests through the test script**, `unity-scene-habits`' `references/run-tests.sh`, or the
   copy your brief names. It refreshes, recompiles with focus, reloads, checks the editor is ready
   and no scene is dirty, and stops on a modal dialog instead of polling forever.
-- **Take the editor lock** when another agent may use the editor: `--lock <dir>`, the path in
-  your brief. The wait is bounded and the script exits without running if the lock never frees.
-  Work on something else, try once more, then report. Never loop on it. A build or import check
-  takes the same lock with `mkdir`, released in a `trap`.
 - **Exit 3 means stop.** The editor stopped answering, almost always a modal dialog. Report it.
 - **In batch mode** the editor must be closed, and it is one batch run at a time
   (`unity-scene-habits`).

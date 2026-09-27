@@ -246,12 +246,6 @@ retyping the steps. Each step fixes a failure seen in practice:
 Filter by category where the runner supports it (the template passes `--filter_type category`;
 confirm the parameter names with `unity command --query run_tests --detail full`).
 
-**One agent on the editor at a time.** `--lock DIR` takes a `mkdir` lock before anything else,
-waits a bounded time, exits without running if it never gets it, and always releases it on exit.
-Another agent can meanwhile write C#, since the editor does not pick up `.cs` files until
-someone refreshes. The holder's step 1 does refresh, so the other agent keeps its files compiling
-at every save, or the holder's run breaks on them.
-
 ## Player builds
 
 Build from the open editor in four steps:
