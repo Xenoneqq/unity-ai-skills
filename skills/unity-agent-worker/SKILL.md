@@ -102,7 +102,8 @@ one editor, batch included, and an import is expensive.
   the brief's autonomy mode lets you open one (otherwise ask your manager and keep working), run
   tests through `references/run-tests.sh`. **Exit 3 means recover once**: run
   `references/editor-recover.sh`, retry once, and report if it is still stuck. Its exit 6 means
-  the screen is locked and the editor was closed: carry on in batch mode.
+  the screen is locked and the editor was closed: carry on in batch mode. Exit 7 means the editor
+  is the user's: leave it and report. It acts only on an editor an agent opened and marked.
 - **In speed mode your brief may give an editor queue**: pass `--queue <dir>`. The wait is
   bounded; on exit 4, work on something else, try once more, then report. Never loop on it.
 - **The project's rule wins.** If the project's `CLAUDE.md` says who drives the editor, follow it

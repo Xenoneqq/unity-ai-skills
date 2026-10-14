@@ -2,8 +2,8 @@
 
 The editor stays closed. Every job boots a headless editor, does one thing and exits: builders
 through `-executeMethod`, tests through the test runner, compile checks from the log. No window
-opens, nothing takes the user's focus, and nothing depends on the display, so a locked or
-sleeping screen does not stall it. With a warm `Library/` a call takes about 10 s; a filtered
+opens, nothing takes the user's focus, and nothing depends on the display, so a locked screen
+should not stall it (not yet verified). A machine that goes to sleep stops batch work too. With a warm `Library/` a call takes about 10 s; a filtered
 test run in an open editor takes several times that once the recompile, domain reload and focus
 are paid.
 
@@ -64,8 +64,8 @@ static class BatchModeMute
 Tests that check audio routing or `AudioSource.isPlaying` still pass; only the output is muted.
 Put it in the project's own editor-tools folder if it has one.
 
-[batch-tests.sh](batch-tests.sh) wraps `unity test` into one command with the same summary and
-exit codes as the connected runner. Copy it into the project once, as with
+[batch-tests.sh](batch-tests.sh) wraps `unity test` into one command with the same summary as
+the connected runner: exit 0 passed, 1 failed, 2 the run never started, 3 it timed out. Copy it into the project once, as with
 [run-tests.sh](run-tests.sh).
 
 Without the CLI, use the raw flags below; everything else in this file applies to both.

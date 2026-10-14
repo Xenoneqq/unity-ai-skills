@@ -17,7 +17,7 @@
 #
 # Exit: 0 passed, 1 a test failed or nothing ran, 2 preflight failed, 3 the editor stopped
 # answering (a locked screen, an unfocused editor or a modal dialog: run editor-recover.sh once
-# and retry), 4 no turn in the queue.
+# and retry; it acts only on an editor an agent opened), 4 no turn in the queue.
 
 set -u
 
@@ -41,6 +41,7 @@ QUEUE_TRIES=${QUEUE_TRIES:-60}   # x 10 s
 READY_TRIES=${READY_TRIES:-60}   # x 5 s
 PLAY_TRIES=${PLAY_TRIES:-45}     # x 20 s
 RUN_TIMEOUT=${RUN_TIMEOUT:-600}  # seconds, per EditMode run
+PY=$(command -v python3 || command -v python) || { echo "run-tests: needs python3 or python"; exit 2; }
 
 OUT=$(mktemp -d)
 cleanup() {
@@ -59,14 +60,14 @@ u() { unity command "$@" --json --no-banner > "$OUT/last.json" 2>&1; }
 # A main-thread timeout means a stalled editor, not a slow one. Never keep polling past it.
 stuck() {
   if grep -qiE 'timed? ?out|main thread' "$OUT/last.json"; then
-    die 3 "editor stopped answering on '$1': a locked screen, an unfocused editor or a modal dialog. Run editor-recover.sh once and retry; report if it does not exit 0."
+    die 3 "editor stopped answering on '$1': a locked screen, an unfocused editor or a modal dialog. Run editor-recover.sh once and retry; it leaves a user-opened editor alone (exit 7). Report if it does not exit 0."
   fi
 }
 
 # jget KEY [SCOPE]: first value of KEY in the last payload (inside the first SCOPE object if
 # given), case-insensitive, with JSON-encoded strings decoded.
 jget() {
-  python3 - "$OUT/last.json" "$@" <<'PY'
+  "$PY" - "$OUT/last.json" "$@" <<'PY'
 import sys, json
 def dec(x):
     if isinstance(x, str):
@@ -98,7 +99,7 @@ PY
 
 # Failed test names in the last payload. CHECK: the result field names on your editor.
 failed_names() {
-  python3 - "$OUT/last.json" <<'PY'
+  "$PY" - "$OUT/last.json" <<'PY'
 import sys, json
 def dec(x):
     if isinstance(x, str):

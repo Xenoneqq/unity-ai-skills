@@ -58,7 +58,8 @@ fi
 | A job that needs a live editor, 6.0+ with Pipeline | Connected, on demand: open, do the job, close | [references/connected-editor.md](references/connected-editor.md) |
 | An editor already has the project | Probably the user's. Ask; never drive it or close it | below |
 
-Batch opens no window, takes no focus and does not stall when the screen locks; with a warm
+Batch opens no window, takes no focus and needs no display, so a locked screen should not
+stall it (not yet verified); with a warm
 `Library/` a call takes about 10 s. Connected is only for jobs that need a live editor:
 interactive inspection, `eval` loops while debugging, and anything the user asked to watch.
 Pipeline needs **6.0 or newer**; that floor is not negotiable.

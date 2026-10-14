@@ -23,10 +23,11 @@ Each size over two backdrops at least: a bright busy one and a dark one. Add a r
 frame if the developer has one. Write the images to `ui-captures/` at the repo root, outside
 `Assets/`. They are scratch, not something to commit.
 
-## First choice: the editor's screenshot command
+## When a live editor is already open: the editor's screenshot command
 
-On the connected path (editor 6.0+, Pipeline installed, editor `ready` in `unity status`; see
-`unity-scene-habits`), the editor captures itself at any size:
+Agents work in batch mode by default (`unity-scene-habits`), where the capture recipes below
+render without a window. When a live editor is already open on the connected path (editor 6.0+,
+Pipeline installed, editor `ready` in `unity status`), the editor captures itself at any size:
 
 ```bash
 unity command --query screenshot    # confirm this editor exposes it, and read its parameters
@@ -39,8 +40,8 @@ real game rather than a stand-in. Add the bright and dark cases by capturing in 
 darkest places the game has. Never place the screen in a scene just to capture it and then save
 that scene.
 
-The recipes below are for when this command is not available: an older editor, no Pipeline, or
-a screen that cannot be reached in Play mode.
+The recipes below are the default: batch mode, an older editor, no Pipeline, or a screen that
+cannot be reached in Play mode. Do not open an editor just to use this command.
 
 Rendering needs a graphics device: in batch mode, drop `-nographics` for capture runs.
 

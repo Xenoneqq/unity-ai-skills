@@ -121,11 +121,12 @@ ps -Ao pid,args | grep -i '[-]projectpath' | grep -F "$ROOT"   # [-] stops grep 
    Whether you may open an editor on your own is the autonomy mode's call (Step 0a). Install a
    package only now or between tasks, never while a worker runs.
 5. **Settle the autonomy mode** (Step 0a), in the same question.
-6. **Keep the machine awake** in either automatic mode, macOS only and optional: a sleeping or
-   locked Mac stalls an open editor's main thread. Check a keep-awake tool the user already has
+6. **Keep the machine awake** in either automatic mode, macOS only and optional: a locked screen
+   stalls an open editor's main thread, and a sleeping Mac stops everything, batch included. Check a keep-awake tool the user already has
    (Amphetamine: `osascript -e 'tell application "Amphetamine" to return session is active'`, and
    `start new session` to turn it on), else `caffeinate -dimsu &` for the session. Say you did.
-   Batch work survives a locked screen; this is for the connected path and long sessions.
+   Batch needs no display, so it should keep going through a locked screen (not yet verified),
+   but nothing survives the machine going to sleep.
 7. Cut the first branch off the locked base in kebab-case, named for the whole body of work or,
    with stacked branches, for the first task.
 
@@ -331,8 +332,8 @@ resends the agent's whole conversation, so long workers and a long-lived manager
 - **Keep tasks small** (Step 3).
 - **A test budget in every brief** (`unity-agent-worker`, the test budget): code first and
   tests after, isolated runs while working, list, isolate, test, fix when the full run breaks,
-  and a hard number, "at most N test runs", with the filter to use. Every run costs a recompile
-  and a domain reload.
+  and a hard number, "at most N full runs", with the filter to use. Filtered batch runs are cheap
+  (about 10 s); full suites, and any run in an open editor, are not.
 - **A full suite every 3-4 tasks, and once at the end**, right before the final commit, run by
   the writer of that task or by you. Filtered runs miss what a full run finds. A task that
   touches shared core code (the player controller, the save system, anything many features

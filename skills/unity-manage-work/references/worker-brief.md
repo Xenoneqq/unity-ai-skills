@@ -117,13 +117,14 @@ closed.
 
 Only when the user chose it at kickoff, or this brief allows a live editor for one job.
 
-1. Open the editor only if it is not open, do the job, close it again (`unity-scene-habits`,
-   `references/connected-editor.md`, "On demand, then close"). Never drive an editor the user is
-   working in.
+1. Open the editor only if it is not open, mark it as agent-opened, do the job, close it again
+   (`unity-scene-habits`, `references/connected-editor.md`, "On demand, then close"). Never drive
+   an editor the user is working in.
 2. Run tests with `session-materials/run-tests.sh`. It refreshes, recompiles, reloads, checks
    the editor is ready and no scene is dirty, then runs.
 3. **Exit 3**: the editor stopped answering. Run `session-materials/editor-recover.sh` once and
-   retry once. Its exit 6 means the screen is locked and the editor was closed: carry on in batch
-   mode. Exit 5, or a second exit 3: stop and report.
+   retry once. It acts only on an editor an agent opened. Its exit 6 means the screen is locked
+   and the editor was closed: carry on in batch mode. Exit 5 or 7, or a second exit 3: stop and
+   report.
 4. If this brief names an editor agent instead, send it the branch, exactly what to run and what
    counts as pass, one request at a time. To wait, end your turn: the reply resumes you.

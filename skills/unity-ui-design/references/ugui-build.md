@@ -1,8 +1,8 @@
 # Building with uGUI
 
 uGUI lives in prefab and scene YAML, which only the editor may write. Every screen is built or
-changed by an editor script run through `unity-scene-habits`: the connected editor on 6.0 and
-newer, batch mode otherwise. That skill's prefab recipes cover opening, editing and saving a
+changed by an editor script run through `unity-scene-habits`: in batch mode by default, or in
+a live editor when one is already open for the job. That skill's prefab recipes cover opening, editing and saving a
 prefab asset without touching a scene.
 
 Where the files go is `unity-file-structure-habits`' call. The paths below are the fallback.

@@ -80,9 +80,11 @@ the connected path its test runs go through the test script, `session-materials/
 - **On the connected path, run only connected-safe methods.** A method that may call
   `EditorApplication.Exit` without an `Application.isBatchMode` guard closes the user's editor
   and their unsaved work. If you cannot tell, report back instead of running it.
-- **Timeouts plus an idle editor mean a dialog.** If requests time out on the editor's main
-  thread while its CPU sits idle and its log is quiet, a modal dialog is waiting for a click.
-  Stop retrying and tell the manager the user needs to look at the editor.
+- **Timeouts plus an idle editor mean a stalled editor.** If requests time out on the editor's
+  main thread while its CPU sits idle and its log is quiet, the screen may be locked or a modal
+  dialog may be waiting. Stop retrying and run `editor-recover.sh` once (`unity-scene-habits`). It
+  acts only on an editor an agent opened; on exit 5 or 7, tell the manager the user needs to look
+  at the editor.
 - **Never open the project in a different editor version than the project's own.** That upgrade
   is irreversible. If the version is missing, report it rather than substituting.
 - **Never close or kill an editor you did not start**, and never `unity close` — it exits without

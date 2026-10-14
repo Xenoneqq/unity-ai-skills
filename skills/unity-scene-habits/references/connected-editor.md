@@ -35,8 +35,9 @@ on a server that may not exist.
 
 ## Opening the editor
 
-Open it only when the user agreed to it, and never while a batch job is running on the project:
-the editor takes the project lock and the job fails.
+Open it only when the user asked for it or the autonomy mode allows it (`unity-manage-work`), and
+never while a batch job is running on the project: the editor takes the project lock and the job
+fails.
 
 `unity open` can hang silently, printing nothing and starting no process. Run it in the
 background, and if no Unity process appears within about a minute, launch the editor directly
@@ -54,13 +55,16 @@ locks.
    and they may be testing. Ask; never drive it or close it without a yes.
 2. **Open and wait for ready:** `unity open "$ROOT"` in the background, then
    `unity status --project-path "$ROOT" --until-ready --timeout 300` and one
-   `unity command editor_status` that returns success.
+   `unity command editor_status` that returns success. Then mark it as yours:
+   `touch "$ROOT/Temp/agent-opened-editor"`. Unity clears `Temp/` when it exits, so the marker
+   lasts exactly as long as this editor, and the recovery script acts only on a marked one.
 3. **Do the job.**
 4. **Close it:** `unity close "$ROOT"`. `--force` only for a wedged editor the agent itself opened,
    since `close` exits without saving.
 
 Every connected job sits behind [editor-recover.sh](editor-recover.sh): when the editor stops
-answering, run it once before reporting anything.
+answering, run it once before reporting anything. It force-closes and relaunches only an editor
+carrying the marker; an unmarked one is the user's, and it exits 7 without touching it.
 
 ## Installing the package
 
@@ -264,8 +268,8 @@ retyping the steps. Each step fixes a failure seen in practice:
    then report.
 7. **A main-thread timeout means recover, not poll.** On a laptop it is usually a locked screen
    or an unfocused editor, less often a modal dialog. Run [editor-recover.sh](editor-recover.sh)
-   once: it checks the lock, leaves Play mode, then relaunches. Ask the user only if the relaunch
-   fails or a startup dialog appears.
+   once: it checks the lock, leaves Play mode, then relaunches, on an agent-opened editor only.
+   Ask the user if it exits 5 (a startup dialog) or 7 (the editor is theirs).
 8. **Several names in one call.** `--filter` is a substring match and `"A|B"` matches nothing, so
    the script loops over the names it is given. Rerunning only the failures is one call.
 
@@ -315,8 +319,8 @@ On the connected path agents work inside the user's own session, so:
   that blocks the main thread. Open another scene first, change the file, then reopen it.
 - **A blocked editor looks idle.** Requests time out on the main thread while the CPU sits idle
   and the log is quiet. Check for a locked screen first; otherwise it is likely a modal dialog.
-  Stop retrying, run [editor-recover.sh](editor-recover.sh) once if the agent opened this editor,
-  and ask the user to look if it is theirs.
+  Stop retrying and run [editor-recover.sh](editor-recover.sh) once. It leaves an editor the user
+  opened alone (exit 7); then ask the user to look.
 - **Refuse to open a scene over unsaved changes.** A builder that opens a scene while the user has
   unsaved edits discards them. Task scripts check for dirty scenes first (see
   [batch-mode.md](batch-mode.md)).

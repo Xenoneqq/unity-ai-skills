@@ -11,7 +11,7 @@
 # Set UNITY_PROJECT_PATH to the Unity project (default: the current directory).
 #
 # Exit: 0 passed, 1 a test failed or nothing ran, 2 setup failed (an editor holds the project,
-# no licence, a compile error, or no report written).
+# no licence, a compile error, or no report written), 3 a run hit RUN_TIMEOUT.
 
 set -u
 
@@ -31,6 +31,7 @@ fi
 
 ROOT=${UNITY_PROJECT_PATH:-.}
 RUN_TIMEOUT=${RUN_TIMEOUT:-900}   # seconds, per call
+PY=$(command -v python3 || command -v python) || { echo "batch-tests: needs python3 or python"; exit 2; }
 
 OUT=$(mktemp -d)
 trap 'rm -rf "$OUT"' EXIT
@@ -39,9 +40,13 @@ trap 'exit 130' INT TERM
 say() { echo "batch-tests: $*"; }
 die() { say "$2"; exit "$1"; }
 
-# Setup failures show in the output, not the report: the run never got to the tests.
+# Setup failures show in the logs, not the report: the run never got to the tests. The editor
+# log carries compile errors; the CLI's own output carries the rest.
 setup_failed() {
-  local log=$1
+  local log=$OUT/$1.all
+  cat "$OUT/$1.log" "$OUT/$1.editor.log" > "$log" 2>/dev/null
+  [ "$2" -ge $((RUN_TIMEOUT - 5)) ] &&
+    die 3 "timed out after ${2}s with no report; raise RUN_TIMEOUT if the suite is just slow"
   grep -qE 'error CS[0-9]{4}' "$log" &&
     die 2 "compile error, no tests ran: $(grep -m3 -E 'error CS[0-9]{4}' "$log" | tr '\n' ' ')"
   grep -qiE 'No valid Unity Editor license' "$log" &&
@@ -52,19 +57,29 @@ setup_failed() {
 }
 
 # Totals and failed names from one NUnit report: "T P F" on the first line, then one failed name
-# per line with its message.
+# per line with its message. A fixture whose setup failed counts failures without failed test
+# cases, so failed suites are listed when no case is.
 summarize() {
-  python3 - "$1" <<'PY'
+  "$PY" - "$1" <<'PY'
 import sys, xml.etree.ElementTree as ET
 try: root = ET.parse(sys.argv[1]).getroot()
 except Exception: print("0 0 0"); sys.exit(0)
 run = root if root.tag == "test-run" else root.find(".//test-run") or root
 a = run.attrib
 print(a.get("total", "0"), a.get("passed", "0"), a.get("failed", "0"))
-for case in root.iter("test-case"):
-    if case.get("result", "").lower().startswith("fail"):
-        msg = (case.findtext("./failure/message") or "").strip().splitlines()
-        print(case.get("fullname") or case.get("name"), "|", msg[0] if msg else "")
+def failed(nodes):
+    out = []
+    for n in nodes:
+        if n.get("result", "").lower().startswith("fail"):
+            msg = (n.findtext("./failure/message") or "").strip().splitlines()
+            out.append(f'{n.get("fullname") or n.get("name")} | {msg[0] if msg else ""}')
+    return out
+lines = failed(root.iter("test-case"))
+if not lines:
+    suites = [n for n in root.iter("test-suite") if n.get("type") != "Assembly"]
+    lines = failed(n for n in suites if not any(
+        c.get("result", "").lower().startswith("fail") for c in n.iter("test-suite") if c is not n))
+print("\n".join(lines))
 PY
 }
 
@@ -75,9 +90,11 @@ run_once() {
   local extra=()
   [ -n "$CATEGORY" ] && extra+=(-testCategory "$CATEGORY")   # CHECK: forwarded after --
   [ "$NOGFX" = 1 ] && extra+=(-nographics)
-  [ ${#extra[@]} -gt 0 ] && args+=(-- "${extra[@]}")
+  extra+=(-logFile "$OUT/$i.editor.log")   # CHECK: forwarded after --
+  args+=(-- "${extra[@]}")
+  local start=$SECONDS
   unity "${args[@]}" > "$OUT/$i.log" 2>&1
-  [ -s "$OUT/$i.xml" ] || setup_failed "$OUT/$i.log"
+  [ -s "$OUT/$i.xml" ] || setup_failed "$i" $((SECONDS - start))
 }
 
 TOTAL=0 FAILED=0 RUNS=0 FAILS=() NORUN=()
@@ -86,11 +103,13 @@ for name in "${NAMES[@]}"; do
   label=${name:-${CATEGORY:-all}}
   RUNS=$((RUNS + 1))
   run_once "$name" "$RUNS"
+  before=${#FAILS[@]}
   { read -r T _ F; while IFS= read -r line; do [ -n "$line" ] && FAILS+=("$line"); done; } \
     < <(summarize "$OUT/$RUNS.xml")
   case "$T" in ''|*[!0-9]*) T=0 ;; esac
   case "$F" in ''|*[!0-9]*) F=0 ;; esac
   [ "$T" = 0 ] && { NORUN+=("$label"); continue; }
+  [ "$F" != 0 ] && [ ${#FAILS[@]} -eq "$before" ] && FAILS+=("$label | $F failed, no failing test named in the report")
   TOTAL=$((TOTAL + T)); FAILED=$((FAILED + F))
 done
 
