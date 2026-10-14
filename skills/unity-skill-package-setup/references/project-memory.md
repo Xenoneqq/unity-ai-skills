@@ -82,6 +82,9 @@ Pointers only; the skills carry the procedure.
   when it breaks (`unity-agent-worker`).
 - **One writer at a time.** Parallel writers in worktrees are speed mode, only on request
   (`unity-manage-work`).
+- **Autonomy mode.** <full automatic, semi automatic or human assisted, if the user has a
+  preference; leave it out and the manager asks at kickoff>. The user can switch it any time.
+  Whatever the mode, an ask reaches the user in the conversation and on the phone.
 - **Branches.** <one session branch per body of work, or stacked branches, one per task; leave
   it out and the manager asks at kickoff>. Agents never push or merge.
 

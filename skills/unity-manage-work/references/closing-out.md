@@ -46,8 +46,8 @@ deliverable; the user opens the PRs.
    unavailable.
 3. **Implementations** — per task: what it covers, **the verification rung it reached and what
    remains unproven**, who signed it off or that it waits in the combined sign-off, and for any
-   **PARTIAL**: what landed, what did not, the blocker, the suggested next step. Under unattended
-   mode, list anything about feel (movement, weapon feel, difficulty) as unproven and needing a
+   **PARTIAL**: what landed, what did not, the blocker, the suggested next step. Under full
+   automatic, list anything about feel (movement, weapon feel, difficulty) as unproven and needing a
    person, whatever the tests say.
    State once, up front, whether this project has automated tests at all. A reader who assumes it
    does will misread every line under this heading.

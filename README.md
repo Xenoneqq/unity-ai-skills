@@ -68,6 +68,8 @@ After that, reach for `unity-manage-work` when there is a list to get through an
 
 Agents run Unity in batch mode by default, with the editor closed. Builders and tests run headless, so no window opens, nothing steals your focus, and a locked screen does not stall the work. The editor is yours: agents open it only for the few jobs that need a live one and close it again, and when work is done they ask whether you want to test, open the project on the right branch and tell you what to try. While you have it open they leave Unity alone and keep doing everything else.
 
+You choose how much the manager does on its own, and can change it mid-session in plain words. Full automatic opens and closes the editor itself and saves every sign-off for the end. Semi automatic, the default, works without stopping but asks before anything that takes over your machine, without waiting on the answer. Human assisted also brings you the real decisions, a few at a time. Whenever it needs you, it says so in the conversation and on your phone, up to three times, 15 minutes apart, and then carries on with what it can.
+
 The same rules run through all of them. Prefer prefabs to scenes. Never hand-edit Unity's YAML or meta files, because the editor is the only safe writer. Never claim a change is verified further than it actually was.
 
 ## License

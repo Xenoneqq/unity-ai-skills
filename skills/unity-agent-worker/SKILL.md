@@ -98,7 +98,8 @@ one editor, batch included, and an import is expensive.
   `references/batch-tests.sh`, or the copy your brief names. Nothing to focus, no window.
 - **If an editor holds the project** (exit 2, "an editor holds the project"), it is probably the
   user testing. Never close it. Do your non-Unity work, then report it.
-- **On the connected path**, only when your brief chose it or the job needs a live editor, run
+- **On the connected path**, only when your brief chose it or the job needs a live editor and
+  the brief's autonomy mode lets you open one (otherwise ask your manager and keep working), run
   tests through `references/run-tests.sh`. **Exit 3 means recover once**: run
   `references/editor-recover.sh`, retry once, and report if it is still stuck. Its exit 6 means
   the screen is locked and the editor was closed: carry on in batch mode.

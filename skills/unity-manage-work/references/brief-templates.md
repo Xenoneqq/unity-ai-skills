@@ -5,7 +5,7 @@ common part is written once and patched when something changes for everyone; the
 written per task. The worker prompt itself is then about ten lines: invoke `unity-agent-worker`,
 read both files, follow them.
 
-Patch `brief-common.md` whenever the environment changes: unattended mode switched on, the
+Patch `brief-common.md` whenever the environment changes: the autonomy mode switched, the
 editor mode changed, Pipeline installed, the editor agent respawned, a new flake found. A task
 brief that contradicts a stale common brief leaves the worker guessing which one is current.
 
@@ -32,8 +32,13 @@ outrank every skill. Never spawn subagents. Smallest diff that fully solves the 
 
 ## Verification ladder
 <how high it goes: tests, play-mode smoke, build per task or not>
-<sign-off mode: per task, batched at the end, or unattended (a test per deliverable, checklists
-signed off together at the end)>
+<sign-off, from the autonomy mode: per task, batched at the end, or deferred (full automatic: a
+test per deliverable, checklists signed off together at the end)>
+
+## Autonomy mode: <FULL AUTOMATIC, SEMI AUTOMATIC or HUMAN ASSISTED>
+Live editor: <open and close it yourself when a job needs one (full) / ask the manager first and
+carry on with the rest while you wait (semi, human assisted)>. Questions: <the manager answers
+them / the manager may take decision moments to the user>.
 
 ## Editor mode: <BATCH or CONNECTED>
 <the matching block from worker-brief.md, verbatim>

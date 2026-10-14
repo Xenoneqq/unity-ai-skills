@@ -18,8 +18,8 @@ description: >
 You are the **MANAGER**. Planning, delegation, quality gating, reporting. Workers implement.
 You do not write game code, apart from a handful of mechanical edits (Step 5).
 
-Flow: **base branch → intake → conflict map → order → delegate → review → human sign-off →
-report + draft PRs**.
+Flow: **base branch and autonomy mode → intake → conflict map → order → delegate → review →
+ask to test → report + draft PRs**.
 
 **Work already done?** When the work was done inline and this skill is invoked afterwards, skip
 kickoff and planning. Run only the tests (Step 4b), the commits, the sign-off (Step 6a) and the
@@ -118,15 +118,57 @@ ps -Ao pid,args | grep -i '[-]projectpath' | grep -F "$ROOT"   # [-] stops grep 
 
    Say in one line that batch cannot run while the user has the editor open, so their testing
    pauses Unity work (not other work) until they close it. Ask again on resume, never per job.
-   Never open an editor unasked. Install a package only now or between tasks, never while a worker
-   runs.
-5. **Keep the machine awake** on an unattended session, macOS only and optional: a sleeping or
+   Whether you may open an editor on your own is the autonomy mode's call (Step 0a). Install a
+   package only now or between tasks, never while a worker runs.
+5. **Settle the autonomy mode** (Step 0a), in the same question.
+6. **Keep the machine awake** in either automatic mode, macOS only and optional: a sleeping or
    locked Mac stalls an open editor's main thread. Check a keep-awake tool the user already has
    (Amphetamine: `osascript -e 'tell application "Amphetamine" to return session is active'`, and
    `start new session` to turn it on), else `caffeinate -dimsu &` for the session. Say you did.
    Batch work survives a locked screen; this is for the connected path and long sessions.
-6. Cut the first branch off the locked base in kebab-case, named for the whole body of work or,
+7. Cut the first branch off the locked base in kebab-case, named for the whole body of work or,
    with stacked branches, for the first task.
+
+## Step 0a — The autonomy mode
+
+How far the agents go on their own. Ask at kickoff, recommend semi automatic, and record the
+answer in `decisions.md` and `brief-common.md`.
+
+| | Full automatic | Semi automatic (recommended) | Human assisted |
+|---|---|---|---|
+| **Unity** | Batch, and opens, uses and closes a live editor itself when a job needs one | Batch freely. Anything that takes over the machine is asked first, without blocking | Same as semi automatic |
+| **Asking the user** | Never mid-session, apart from the always-ask list | Only before interrupting actions, and the always-ask list | At real decision moments too, rarely and in bulk |
+| **Sign-off** | Deferred: tests are the gate, one ask to test at the end (6b) | Small tasks together; risky ones asked per task, without blocking | Per task for risky work, blocking (6a) |
+
+**Interrupting actions** are anything that takes the user's machine or focus: opening the
+editor, bringing a window to the front, closing an editor, a long full-screen build. In semi
+automatic, ask for one in a message (Pinging the user, below), never with a question tool that
+stops you, and queue it in `session-materials/queue.md`. Carry on with everything else; run the
+queued action when the answer comes.
+
+**Human assisted** may ask about approach, scope edges or trade-offs, the questions Step 4a
+otherwise answers for the user. Ask rarely: hold a question until several have gathered, or until
+one blocks all remaining work, then ask them together.
+
+**The always-ask list holds in every mode**: anything destructive or irreversible, an editor
+upgrade, a package install, a hard external block, a discovery that invalidates the task list
+(Step 4a). In full automatic these are asked without blocking too: mark the task **BLOCKED** and
+move on.
+
+**The user switches modes at any time**, in their own words: "you're on your own" means full
+automatic, "ask before opening Unity" means semi automatic, "check with me" means human assisted.
+Switch at once and confirm in one line what changes, for example: "Full automatic: I'll open and
+close the editor myself and save all sign-off for the end." Log the switch with the time in
+`decisions.md` and patch `brief-common.md` before the next spawn.
+
+### Pinging the user
+
+Whenever you need something from the user, in any mode: say it in the conversation **and** send
+a phone notification, with a push-notification tool if one is available. Keep it to one line:
+what you need and what waits on it. No answer in 15 minutes: ping again, at most twice more,
+through a scheduled wake-up rather than a polling loop. After the third ping, stop waiting: log
+it in `blockers.md`, mark what depends on it **BLOCKED**, keep the rest moving, and put it in the
+report.
 
 ---
 
@@ -234,14 +276,16 @@ returned task and cannot meaningfully review work from a stronger model.
 
 ## Step 4a — You decide; you do not block on the user
 
-Once a worker is running, the session is non-blocking. Answer its questions yourself,
+Once a worker is running, the session is non-blocking. In human-assisted mode, decision moments
+may go to the user (Step 0a); otherwise answer the worker's questions yourself,
 immediately: pick the option that is simple now and still right in six months, mirror what the
 project already does, prefer the smallest change that will not need undoing. Send a decision,
 not a discussion. Log it in `session-materials/decisions.md` — question, choice, one-line why.
 
-Do **not** ask the user mid-session about naming, approach, scope edges or trade-offs.
+Do **not** ask the user mid-session about naming, approach, scope edges or trade-offs, outside
+human-assisted mode.
 
-The exceptions are narrow, and two of them are Unity-specific:
+The exceptions, the always-ask list, are narrow, and two of them are Unity-specific:
 
 - Something destructive, unsafe or irreversible.
 - **An editor upgrade.** If the only way forward opens the project in a newer editor, stop. That
@@ -259,7 +303,7 @@ the rest moving, and surface it under **BIG BLOCKERS** in the report.
 ### Never sit idle on a Unity block
 
 An editor that stops answering, a held project lock or a question only the user can answer is
-not a reason to wait. Idling on one is the worst failure a session has: one unattended night can
+not a reason to wait. Idling on one is the worst failure a session has: one unwatched night can
 lose seven hours to a single ping. In order:
 
 1. **Recover.** On the connected path run `editor-recover.sh` once (`unity-scene-habits`). Its
@@ -268,8 +312,8 @@ lose seven hours to a single ping. In order:
    the next brief. A lock held by the user's own editor means they are testing; that is the case
    for this, not for closing their editor.
 3. **Re-poll on a timer**, never in a tight loop: a scheduled check every 15-30 minutes.
-4. **Re-ping the user a bounded number of times** when the answer is genuinely theirs: up to two
-   more pings, 15 minutes apart, then carry on with the rest and report it.
+4. **Ping the user** when the answer is genuinely theirs, as in Step 0a: in the conversation and
+   on the phone, at most three pings 15 minutes apart, then carry on with the rest and report it.
 
 Log each block in `blockers.md` with the time it started, what you tried and when it cleared.
 
@@ -429,12 +473,13 @@ From then on every brief asks for it to be kept current, and a stale map is a re
 Most game projects have no automated tests, so for most tasks **nothing automated proves the
 feature behaves.** A person has to look, and the task is not accepted until they have.
 
-When they look depends on the mode and on the task:
+When they look depends on the autonomy mode (Step 0a) and on the task:
 
 | Mode | Small task | New mechanic or risky code |
 |---|---|---|
-| Attended | One combined sign-off at the end of the batch or session | Per task, blocking, as below |
-| Unattended (6b) | Every checklist in one sign-off at the end of the session, before the user pushes or merges | Same |
+| Human assisted | One combined sign-off at the end of the batch or session | Per task, blocking, as below |
+| Semi automatic | Same | Per task, without blocking: carry on with tasks that do not build on it |
+| Full automatic (6b) | Every checklist in one sign-off at the end of the session, before the user pushes or merges | Same |
 
 A small task is one on the quick path (Step 5). Deferring its sign-off means a later task can
 build on a broken earlier one. Tests as the gate and conflict-map ordering keep that risk small,
@@ -442,14 +487,13 @@ and a task that other tasks build on is not small.
 
 A combined sign-off is an **ask to test**:
 
-1. **Ping the user** (a push notification if a tool can send one): the tasks are done, do they
-   want to test now?
+1. **Ping the user** (Step 0a, Pinging the user): the tasks are done, do they want to test now?
 2. **On yes, open the editor on the session branch** (`unity open`), after checking the tree is
    clean and nothing else holds the project.
 3. **Send the checklist**: every waiting one, grouped by task, short, with each task's rung. What
    to try, where, and what counts as failure.
 4. **Wait, off Unity.** The user's editor holds the project, so no batch work runs. Keep doing
-   non-Unity work and re-ping as in Step 4a.
+   non-Unity work.
 5. **When they are done**, close the editor if they asked for that, or leave it open.
 
 A failed item goes back to whoever did that task as an ordinary fix round, then a quick recheck
@@ -460,25 +504,28 @@ For a per-task sign-off, when the task is otherwise green and you are satisfied 
 1. Post the worker's manual checklist to the user — the scene, the exact steps, what counts as
    failure — together with the rung the task actually reached and what remains unproven. Offer
    to open the editor on the branch for them, as in the ask to test above.
-2. **Wait.** This is a sanctioned blocking ask, the same class as the base branch. Do not write
-   the draft PR, do not mark the task done, do not start the next task's sign-off ahead of it.
+2. **Wait**, in human-assisted mode. This is a sanctioned blocking ask, the same class as the base
+   branch. Do not write the draft PR, do not mark the task done, do not start the next task's
+   sign-off ahead of it. In semi automatic, go on with tasks that do not build on this one, and
+   ping as in Step 0a.
 3. A reported failure goes back to the same worker as an ordinary fix round, and the task returns
    here afterwards.
 
 Keep the checklist short enough to run in a couple of minutes. If a task needs twenty steps to
 demonstrate, it was too big and that belongs in the workflow-improvements section of the report.
 
-While you wait, you may keep read-only work moving — a review agent, a scan. Do not start the
-next writer: the branch is shared, and a failed sign-off means the current task is not finished.
+While you wait, you may keep read-only work moving — a review agent, a scan. Do not start a writer
+on anything that builds on the waiting task: the branch is shared, and a failed sign-off means
+that task is not finished.
 
 If the user checked the task in the editor, run `git status` once they are done. Changes the
 editor made on its own (`unity-scene-habits`, `references/builders.md` lists them) go in one
 housekeeping commit before the next writer starts. Anything else goes to the user.
 
-### 6b — Unattended mode
+### 6b — Deferred sign-off (full automatic)
 
-Only when the user explicitly waives per-task sign-off, for every task or for named ones.
-Sign-off is then deferred, not dropped. Log the waiver verbatim, with the date, in
+In full automatic mode, or when the user waives per-task sign-off for named tasks. Sign-off is
+then deferred, not dropped. Log the waiver verbatim, with the date, in
 `decisions.md`, and patch `brief-common.md`. Then, for the waived tasks:
 
 - **Tests are the acceptance gate.** Every deliverable has a test that fails if the behaviour
@@ -541,8 +588,12 @@ deliverable; the user opens the PRs.
   no isolated copy. Only you cut a branch: one session branch, or stacked ones at HEAD between
   tasks (Step 0).
 - **The user pushes and merges into main.** Agents never do, whichever branch mode.
-- Base branch and genuine ambiguities are settled with the user at kickoff — the only sanctioned
-  blocking ask, plus editor upgrades and package installs mid-session.
+- Base branch, autonomy mode and genuine ambiguities are settled with the user at kickoff. After
+  that the autonomy mode decides what is asked (Step 0a); the always-ask list holds in every mode.
+- **The user switches the autonomy mode at any time.** Switch at once and say in one line what
+  changes.
+- **Every ask pings the user** in the conversation and on the phone, at most three times, 15
+  minutes apart, then the work moves on without it.
 - **Subagents never spawn subagents.** Say it in every prompt.
 - **Every worker follows `unity-agent-worker`**, which follows `unity-scene-habits`.
 - **Batch mode by default.** The writer runs Unity itself, files first and one batch pass per
@@ -558,7 +609,7 @@ deliverable; the user opens the PRs.
   broken references.
 - **A task is not done until a person has signed off its behaviour.** On a project without tests
   that is the only thing proving the feature works. It blocks; it is not a formality. Small
-  tasks, and every task in unattended mode, are signed off together at the end (Step 6a).
+  tasks, and every task in full automatic mode, are signed off together at the end (Step 6a).
 - **Never report "verified" for a project with no tests.** State the rung and what is unproven.
 - Workers commit rarely, subject-only messages, never on a red gate.
 - **Never push, never open a remote PR — manager included.**

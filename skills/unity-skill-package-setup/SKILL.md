@@ -273,8 +273,9 @@ Read `references/project-memory.md` for the content. In short, the generated `CL
 - **How agents work here**, as pointers to the skills rather than copies: files first, with the
   compile check outside the editor once it is established; isolated tests while working, one
   full run at the end, and list, isolate, test, fix when it breaks; one writer at a time, with
-  speed mode only on request; and the preferred branch mode if the user has one (one session
-  branch, or stacked branches per task), otherwise the manager asks at kickoff.
+  speed mode only on request; the preferred branch mode if the user has one (one session
+  branch, or stacked branches per task); and the preferred autonomy mode (full automatic, semi
+  automatic or human assisted). Without a preference, the manager asks both at kickoff.
 
 `AGENTS.md` covers the same ground for tools that read that filename instead. Write it as a short
 file that points at `CLAUDE.md` rather than duplicating it — two copies of the same rules drift.

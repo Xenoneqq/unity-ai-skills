@@ -38,7 +38,7 @@ few lines on top of the common brief.
   smoke-tested in play mode, is a build affordable per task. The worker must not have to discover
   this. Say explicitly that it reports the rung it reached and never claims "verified".
 - **That a manual checklist is required** whenever nothing automated proves the behaviour, and
-  that the task is not done until a person confirms it. Under unattended mode (Step 6b) add that
+  that the task is not done until a person confirms it. Under full automatic (Step 6b) add that
   every deliverable also needs a test that fails if the behaviour breaks, driven through test
   seams and deterministic (`unity-coding-habits`, `references/testing.md`), and that the
   checklist is still written, for the combined sign-off at the end of the session.
@@ -109,7 +109,9 @@ closed.
    editor. Do the non-Unity part of the task, then report.
 4. A build or an import check runs in the same pass, one at a time.
 5. If the task needs a live editor (interactive inspection, something the user asked to watch),
-   say so in your report rather than opening one, unless this brief allows it.
+   follow the autonomy mode in this brief: in full automatic, open it, do the job and close it as
+   in the CONNECTED block; otherwise ask the manager with `SendMessage` and keep working on the
+   rest while you wait.
 
 ## Editor mode: CONNECTED, verbatim
 
