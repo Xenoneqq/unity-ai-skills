@@ -124,7 +124,7 @@ ps -Ao pid,args | grep -i '[-]projectpath' | grep -F "$ROOT"   # [-] stops grep 
 6. **Keep the machine awake** in either automatic mode, macOS only and optional: a locked screen
    stalls an open editor's main thread, and a sleeping Mac stops everything, batch included. Check a keep-awake tool the user already has
    (Amphetamine: `osascript -e 'tell application "Amphetamine" to return session is active'`, and
-   `start new session` to turn it on), else `caffeinate -dimsu &` for the session. Say you did.
+   `start new session` to turn it on), else `caffeinate -dimsu -t <session length in seconds> &`, so it cannot outlive the session. Say you did.
    Batch needs no display, so it should keep going through a locked screen (not yet verified),
    but nothing survives the machine going to sleep.
 7. Cut the first branch off the locked base in kebab-case, named for the whole body of work or,

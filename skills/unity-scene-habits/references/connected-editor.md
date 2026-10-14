@@ -55,11 +55,14 @@ locks.
    and they may be testing. Ask; never drive it or close it without a yes.
 2. **Open and wait for ready:** `unity open "$ROOT"` in the background, then
    `unity status --project-path "$ROOT" --until-ready --timeout 300` and one
-   `unity command editor_status` that returns success. Then mark it as yours:
-   `touch "$ROOT/Temp/agent-opened-editor"`. Unity clears `Temp/` when it exits, so the marker
-   lasts exactly as long as this editor, and the recovery script acts only on a marked one.
+   `unity command editor_status` that returns success. Then mark it as yours with its process id:
+   `pgrep -if -- "-projectpath.*$ROOT" | head -1 > "$ROOT/Temp/agent-opened-editor"` (on Windows,
+   the pid from `unity status --json`). The recovery script acts only when the marker names the
+   running editor, so a marker left behind by a crash or a kill never covers an editor the user
+   opens later.
 3. **Do the job.**
-4. **Close it:** `unity close "$ROOT"`. `--force` only for a wedged editor the agent itself opened,
+4. **Close it:** `unity close "$ROOT"`, then `rm -f "$ROOT/Temp/agent-opened-editor"`. `--force`
+   only for a wedged editor the agent itself opened,
    since `close` exits without saving.
 
 Every connected job sits behind [editor-recover.sh](editor-recover.sh): when the editor stops

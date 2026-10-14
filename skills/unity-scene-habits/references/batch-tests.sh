@@ -7,11 +7,13 @@
 #
 # NAMEs run one call each, since `unity test --filter` takes one pattern, so rerunning only the
 # failures is one call. With no NAME and no --category, everything in the mode runs.
+# --category '!NAME' leaves a category out, e.g. '!Screenshot' to keep older shots on disk.
 # --nographics is for suites with no rendering; screenshot tests need graphics.
 # Set UNITY_PROJECT_PATH to the Unity project (default: the current directory).
 #
 # Exit: 0 passed, 1 a test failed or nothing ran, 2 setup failed (an editor holds the project,
-# no licence, a compile error, or no report written), 3 a run hit RUN_TIMEOUT.
+# no licence, a compile error, or no report written), 3 a run hit RUN_TIMEOUT (the other names
+# still run).
 
 set -u
 
@@ -31,7 +33,8 @@ fi
 
 ROOT=${UNITY_PROJECT_PATH:-.}
 RUN_TIMEOUT=${RUN_TIMEOUT:-900}   # seconds, per call
-PY=$(command -v python3 || command -v python) || { echo "batch-tests: needs python3 or python"; exit 2; }
+PY=; for c in python3 python; do "$c" -c pass 2>/dev/null && { PY=$c; break; }; done   # a Windows Store stub fails here
+[ -n "$PY" ] || { echo "batch-tests: needs python3 or python"; exit 2; }
 
 OUT=$(mktemp -d)
 trap 'rm -rf "$OUT"' EXIT
@@ -45,8 +48,7 @@ die() { say "$2"; exit "$1"; }
 setup_failed() {
   local log=$OUT/$1.all
   cat "$OUT/$1.log" "$OUT/$1.editor.log" > "$log" 2>/dev/null
-  [ "$2" -ge $((RUN_TIMEOUT - 5)) ] &&
-    die 3 "timed out after ${2}s with no report; raise RUN_TIMEOUT if the suite is just slow"
+  [ "$2" -ge $((RUN_TIMEOUT - 5)) ] && { say "$3: timed out after ${2}s with no report"; return 3; }
   grep -qE 'error CS[0-9]{4}' "$log" &&
     die 2 "compile error, no tests ran: $(grep -m3 -E 'error CS[0-9]{4}' "$log" | tr '\n' ' ')"
   grep -qiE 'No valid Unity Editor license' "$log" &&
@@ -88,21 +90,21 @@ run_once() {
   local args=(test "$ROOT" --mode "$MODE" --output "$OUT/$i.xml" --timeout "$RUN_TIMEOUT" --no-banner)
   [ -n "$name" ] && args+=(--filter "$name")
   local extra=()
-  [ -n "$CATEGORY" ] && extra+=(-testCategory "$CATEGORY")   # CHECK: forwarded after --
+  [ -n "$CATEGORY" ] && extra+=(-testCategory "$CATEGORY")
   [ "$NOGFX" = 1 ] && extra+=(-nographics)
-  extra+=(-logFile "$OUT/$i.editor.log")   # CHECK: forwarded after --
+  extra+=(-logFile "$OUT/$i.editor.log")
   args+=(-- "${extra[@]}")
   local start=$SECONDS
   unity "${args[@]}" > "$OUT/$i.log" 2>&1
-  [ -s "$OUT/$i.xml" ] || setup_failed "$i" $((SECONDS - start))
+  [ -s "$OUT/$i.xml" ] || setup_failed "$i" $((SECONDS - start)) "${name:-${CATEGORY:-all}}"
 }
 
-TOTAL=0 FAILED=0 RUNS=0 FAILS=() NORUN=()
+TOTAL=0 FAILED=0 RUNS=0 FAILS=() NORUN=() TIMEDOUT=()
 [ ${#NAMES[@]} -eq 0 ] && NAMES=("")
 for name in "${NAMES[@]}"; do
   label=${name:-${CATEGORY:-all}}
   RUNS=$((RUNS + 1))
-  run_once "$name" "$RUNS"
+  run_once "$name" "$RUNS" || { TIMEDOUT+=("$label"); continue; }
   before=${#FAILS[@]}
   { read -r T _ F; while IFS= read -r line; do [ -n "$line" ] && FAILS+=("$line"); done; } \
     < <(summarize "$OUT/$RUNS.xml")
@@ -113,6 +115,10 @@ for name in "${NAMES[@]}"; do
   TOTAL=$((TOTAL + T)); FAILED=$((FAILED + F))
 done
 
+if [ ${#TIMEDOUT[@]} -gt 0 ]; then
+  say "timed out: ${TIMEDOUT[*]}; raise RUN_TIMEOUT if the suite is just slow"
+  [ ${#FAILS[@]} -eq 0 ] && [ ${#NORUN[@]} -eq 0 ] && exit 3
+fi
 if [ ${#FAILS[@]} -eq 0 ] && [ ${#NORUN[@]} -eq 0 ]; then
   say "$MODE ok: $TOTAL tests passed in $RUNS run(s)"
   exit 0
@@ -120,7 +126,8 @@ fi
 [ ${#NORUN[@]} -gt 0 ] && say "no tests ran for: ${NORUN[*]} (wrong filter or category)"
 if [ ${#FAILS[@]} -gt 0 ]; then
   for f in "${FAILS[@]}"; do say "failed: $f"; done
-  say "rerun only the failures: $0 --mode $MODE $(printf '%s\n' "${FAILS[@]}" | sed 's/ |.*//' | tr '\n' ' ')"
+  rerun=() ; for f in "${FAILS[@]}"; do rerun+=("${f%% |*}"); done
+  say "rerun only the failures: $0 --mode $MODE $(printf '%q ' "${rerun[@]}")"
 fi
 say "$MODE FAILED: $FAILED of $TOTAL failed in $RUNS run(s)"
 exit 1

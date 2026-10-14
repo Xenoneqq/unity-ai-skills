@@ -87,8 +87,9 @@ the connected path its test runs go through the test script, `session-materials/
   at the editor.
 - **Never open the project in a different editor version than the project's own.** That upgrade
   is irreversible. If the version is missing, report it rather than substituting.
-- **Never close or kill an editor you did not start**, and never `unity close` — it exits without
-  saving and may be the user's own session.
+- **Never close or kill an editor you did not start.** `unity close` exits without saving, so run
+  it only on an editor an agent opened and marked (`unity-scene-habits`,
+  `references/connected-editor.md`, "On demand, then close"), never on the user's own session.
 - On finish, reply to the sender of the request (a worker cannot know its own id, so never wait
   to be given one) with PASS/FAIL, failing test or error names, the relevant log
   excerpt, and the path to the full log under

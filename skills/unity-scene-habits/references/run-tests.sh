@@ -41,7 +41,8 @@ QUEUE_TRIES=${QUEUE_TRIES:-60}   # x 10 s
 READY_TRIES=${READY_TRIES:-60}   # x 5 s
 PLAY_TRIES=${PLAY_TRIES:-45}     # x 20 s
 RUN_TIMEOUT=${RUN_TIMEOUT:-600}  # seconds, per EditMode run
-PY=$(command -v python3 || command -v python) || { echo "run-tests: needs python3 or python"; exit 2; }
+PY=; for c in python3 python; do "$c" -c pass 2>/dev/null && { PY=$c; break; }; done   # a Windows Store stub fails here
+[ -n "$PY" ] || { echo "run-tests: needs python3 or python"; exit 2; }
 
 OUT=$(mktemp -d)
 cleanup() {

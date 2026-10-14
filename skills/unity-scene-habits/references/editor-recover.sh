@@ -5,10 +5,12 @@
 #
 #   editor-recover.sh [project-path]     (default: UNITY_PROJECT_PATH, else the current directory)
 #
-# It only acts on an editor an agent opened. The agent marks one after opening it, with
-# `touch "$ROOT/Temp/agent-opened-editor"`; Unity clears Temp/ when it exits, so the marker lives
-# as long as that editor. Without the marker the editor is the user's, and the script changes
-# nothing and exits 7: ask the user.
+# It only acts on an editor an agent opened. The agent marks one after opening it by writing the
+# editor's process id into the marker (connected-editor.md, "On demand, then close"):
+#   pgrep -if -- "-projectpath.*<project>" | head -1 > "<project>/Temp/agent-opened-editor"
+# A marker whose id is not the running editor's is stale (a crash or a kill skips Unity's Temp/
+# cleanup), so an editor the user opened later is never mistaken for the agent's. A running editor
+# without a matching marker is the user's: the script changes nothing and exits 7.
 #
 # Order: answers already -> screen locked or display off -> leave Play mode -> close and reopen.
 # A locked screen or a sleeping display stalls the editor's main thread and a relaunch cannot fix
@@ -17,7 +19,7 @@
 #
 # Exit: 0 the editor answers, 4 still locked after LOCK_WAIT, 5 the relaunch never answered
 # (likely a startup dialog: Safe Mode, scene recovery; ask the user), 6 screen locked, editor
-# closed: switch to batch mode, 7 not an agent-opened editor: ask the user.
+# closed: switch to batch mode, 7 not an agent-opened editor: ask the user, 2 bad project path.
 
 set -u
 PROJECT=$(cd "${1:-${UNITY_PROJECT_PATH:-.}}" && pwd) || exit 2
@@ -52,22 +54,42 @@ locked() {
   esac
 }
 
-editor_running() {
-  command -v pgrep > /dev/null || return 0   # cannot tell: assume it is, keep the lockfile
-  pgrep -if -- "-projectpath.*$PROJECT" > /dev/null
+# The running editor's process id for this project, or nothing.
+editor_pid() {
+  if command -v pgrep > /dev/null; then
+    pgrep -if -- "-projectpath.*$(printf '%s' "$PROJECT" | sed 's/[][\.*^$+?(){}|]/\\&/g')" | head -1
+  else   # CHECK: the field name in `unity status --json` on your CLI version
+    unity status --project-path "$PROJECT" --json --no-banner 2>/dev/null |
+      grep -oiE '"pid": *[0-9]+' | grep -oE '[0-9]+' | head -1
+  fi
+}
+
+# Ours: a marker naming the running editor, or a marker and no editor at all (ours died).
+ours() {
+  [ -e "$MARKER" ] || return 1
+  local pid; pid=$(editor_pid)
+  [ -z "$pid" ] || [ "$(cat "$MARKER" 2>/dev/null)" = "$pid" ]
+}
+
+mark() {   # waits for the relaunched process, so even a stuck relaunch stays marked as ours
+  local end=$((SECONDS + 120)) pid
+  while [ $SECONDS -lt $end ]; do
+    pid=$(editor_pid); [ -n "$pid" ] && { mkdir -p "$PROJECT/Temp"; echo "$pid" > "$MARKER"; return; }
+    sleep 5
+  done
 }
 
 close_editor() {
   say "closing the editor (unsaved changes are lost)"
   unity close "$PROJECT" --timeout 60 --force > /dev/null 2>&1
   sleep 5
-  editor_running || rm -f "$PROJECT/Temp/UnityLockfile"
-  rm -f "$PROJECT"/Assets/InitTestScene*.unity "$PROJECT"/Assets/InitTestScene*.unity.meta
+  [ -z "$(editor_pid)" ] && rm -f "$PROJECT/Temp/UnityLockfile"
+  rm -f "$MARKER" "$PROJECT"/Assets/InitTestScene*.unity "$PROJECT"/Assets/InitTestScene*.unity.meta
 }
 
 answers && { say "editor answers"; exit 0; }
 
-if [ ! -e "$MARKER" ]; then
+if ! ours; then
   locked && say "the screen is locked or the display is off"
   say "this editor was not opened by an agent; changing nothing. Ask the user to look."
   exit 7
@@ -93,6 +115,7 @@ wait_for 60 10 && { say "editor answers after editor_stop"; exit 0; }
 close_editor
 say "opening the editor"
 unity open "$PROJECT" > /dev/null 2>&1 &
-wait_for "$UP_WAIT" 15 && { mkdir -p "$PROJECT/Temp" && touch "$MARKER"; say "editor answers after relaunch"; exit 0; }
+mark
+wait_for "$UP_WAIT" 15 && { say "editor answers after relaunch"; exit 0; }
 say "relaunched editor never answered (a startup dialog: Safe Mode, scene recovery?). Ask the user."
 exit 5

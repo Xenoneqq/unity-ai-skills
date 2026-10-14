@@ -58,11 +58,13 @@ the editor closed (`unity-scene-habits`, `references/batch-mode.md`):
 unity run "$ROOT" --timeout 900 --no-tail -l "$LOG" -- -executeMethod Builders.All.Build
 batch-tests.sh --mode EditMode InventoryTests DoorTests   # filtered, one call per name
 batch-tests.sh --mode PlayMode DoorFlowTests
-batch-tests.sh --mode EditMode && batch-tests.sh --mode PlayMode   # the full run, at the end
+batch-tests.sh --mode EditMode; batch-tests.sh --mode PlayMode    # the full run, at the end
 ```
 
-No window opens and nothing needs focus. Then run the rung-0 checks and commit. The connected
-runner (`references/run-tests.sh`) is for when the brief chose a live editor.
+`batch-tests.sh` is `unity-scene-habits`' `references/batch-tests.sh`, or the copy your brief
+names. No window opens and nothing needs focus. Then run the rung-0 checks and commit. The
+connected runner (`unity-scene-habits`' `references/run-tests.sh`) is for when the brief chose a
+live editor.
 
 ## Where files first gives nothing
 

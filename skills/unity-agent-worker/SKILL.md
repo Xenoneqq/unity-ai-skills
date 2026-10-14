@@ -100,8 +100,8 @@ one editor, batch included, and an import is expensive.
   user testing. Never close it. Do your non-Unity work, then report it.
 - **On the connected path**, only when your brief chose it or the job needs a live editor and
   the brief's autonomy mode lets you open one (otherwise ask your manager and keep working), run
-  tests through `references/run-tests.sh`. **Exit 3 means recover once**: run
-  `references/editor-recover.sh`, retry once, and report if it is still stuck. Its exit 6 means
+  tests through `unity-scene-habits`' `references/run-tests.sh`. **Exit 3 means recover once**:
+  run `references/editor-recover.sh` from the same skill, retry once, and report if it is still stuck. Its exit 6 means
   the screen is locked and the editor was closed: carry on in batch mode. Exit 7 means the editor
   is the user's: leave it and report. It acts only on an editor an agent opened and marked.
 - **In speed mode your brief may give an editor queue**: pass `--queue <dir>`. The wait is

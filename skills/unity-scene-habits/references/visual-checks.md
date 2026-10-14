@@ -72,8 +72,9 @@ again after every tweak and compared.
 
 Mark screenshot tests with `[Category("Screenshot")]`. A full-suite run reruns every earlier
 screenshot test and overwrites its PNGs, and a runner may wipe the output folder; filter the
-category out of routine runs if the older shots still need looking at, and after a full run,
-reshoot the ones you need with a filtered run.
+category out of routine runs if the older shots still need looking at (`-testCategory
+"!Screenshot"`, or `batch-tests.sh --category '!Screenshot'`), and after a full run, reshoot the
+ones you need with a filtered run.
 
 ## Looking
 
