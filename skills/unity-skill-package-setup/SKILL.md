@@ -103,6 +103,21 @@ team gets the skills and `claude plugin update` keeps them current. Say that the
 If the user would rather keep it personal, drop `--scope project` — then the skills are theirs
 alone and the generated `CLAUDE.md` still documents the routing for everyone else.
 
+**Which branch to follow**, in the same question: `main`, the stable version (recommended), or
+`experimental`, where changes are tried before they reach `main`. For experimental, add the
+marketplace as `Xenoneqq/unity-ai-skills#experimental`. To switch an existing install, at the
+same scope:
+
+```bash
+claude plugin marketplace remove unity-ai-skills          # also uninstalls the plugin
+claude plugin marketplace add Xenoneqq/unity-ai-skills#experimental --scope project   # or no #ref for main
+claude plugin install unity-ai-skills@unity-ai-skills --scope project
+```
+
+Say that the switch reaches a session only after `/reload-plugins` or a new session, and record
+the branch in the generated `CLAUDE.md`. Skill names stay the same on both branches, so the
+routing table does not change.
+
 ## 5. Connect the editor CLI
 
 The other skills drive the editor fastest through the Unity CLI's Pipeline package, which lets

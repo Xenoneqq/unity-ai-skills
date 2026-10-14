@@ -13,6 +13,23 @@ claude plugin install unity-ai-skills@unity-ai-skills
 
 To install for a repo rather than for yourself, add `--scope project` to both commands. That writes the marketplace and the enabled plugin into the project's `.claude/settings.json` and copies nothing. Commit that file and everyone who clones the repo gets the plugin.
 
+### The experimental branch
+
+`main` is the stable version and the default. Changes are tried on the `experimental` branch first, on real projects, before they reach `main`. To follow it, add the marketplace at that branch instead:
+
+```bash
+claude plugin marketplace add Xenoneqq/unity-ai-skills#experimental
+claude plugin install unity-ai-skills@unity-ai-skills
+```
+
+To switch between the two, remove the marketplace and add it again at the other branch, then reinstall. Removing a marketplace uninstalls its plugins, which is why the install runs again. Start a new session afterwards.
+
+```bash
+claude plugin marketplace remove unity-ai-skills
+```
+
+`unity-skill-package-setup` asks which branch a project should follow and can do the switch for you.
+
 ## Skills
 
 These cover the craft of working in Unity.
