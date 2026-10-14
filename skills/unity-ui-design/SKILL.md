@@ -134,6 +134,9 @@ editor takes minutes, and it lets the developer react to the look before anythin
 the toolkit: reference-resolution stage, aspect and backdrop toggles, the element states side by
 side, and only what the toolkit can actually render.
 
+When the direction is still open, the first mockup shows 3 to 5 variants side by side, the
+current look first if there is one, and the developer picks one before you refine it.
+
 Open it for the developer, ask for a go-ahead or changes, and iterate there. Look at it yourself
 too, taking a screenshot if the environment can. Do not start step 5 until the developer has
 said the mockup is the direction. Once approved, the mockup is the spec: the build matches it,

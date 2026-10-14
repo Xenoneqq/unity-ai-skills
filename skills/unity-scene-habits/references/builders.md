@@ -2,6 +2,8 @@
 
 A builder is editor code that generates assets the project commits: prefabs, a test scene,
 textures, baked data. Read this before writing one, or before rerunning one somebody else wrote.
+Models made outside Unity by a script, such as headless Blender, follow
+[generated-assets.md](generated-assets.md).
 
 ## Where they live
 
@@ -36,8 +38,9 @@ rerun after someone else's change.
 - **Enforce order in code.** If one builder needs another's output, it checks for it and fails
   with a clear message, or calls that builder itself. A note in a comment is not enforcement.
 - **Stop regenerating what a person has edited.** Once someone hand-tunes generated geometry or
-  layout in the editor, the builder must leave it alone. The simplest rule: it only creates an
-  area when the area is missing.
+  layout in the editor, the builder must leave it alone, and changes to it are surgical edits of
+  the group the builder owns. Untouched output it updates in place, so tuning never means
+  deleting an asset to get it rebuilt.
 
 To check that a rerun is neutral, run it and look at `git status`. If fileIDs churn anyway, a
 coarse check that ignores them compares the YAML with IDs normalised. Unity orders objects by

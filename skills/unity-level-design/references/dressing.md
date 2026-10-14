@@ -100,6 +100,19 @@ the editor (`Physics.simulationMode = SimulationMode.Script` and `Physics.Simula
 editors; `Physics.autoSimulation = false` on older ones), then remove the rigidbodies and restore
 the setting. Check the project's version for which API it has.
 
+## Surfaces
+
+- **One texel density for the whole world,** architecture and props alike, and a similar level
+  of detail. A mismatch reads as "wrong scale" even when nobody can say why. The project's
+  value belongs in its own docs; with none, pick one and write it down.
+- **Natural surfaces are irregular in the texture too.** Regular patches or bands read as
+  man-made.
+- **Cut-out geometry** (fences, grates, foliage cards) gets real holes from an opaque material
+  with alpha clipping (Cutout in the Built-in pipeline), not a transparent one, so it sorts and
+  fades in fog like everything around it.
+- **Show the developer early.** A screenshot of the first dressed area gets "too clean" or
+  "textures too coarse" while it is still cheap to act on.
+
 ## Colour and readability
 
 - **One meaning per gameplay colour.** If red means explosive, only explosive things are red.

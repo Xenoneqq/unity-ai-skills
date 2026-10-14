@@ -137,10 +137,17 @@ go-ahead before step 5.
 own kit placed at blockout scale from the start rather than grey primitives, and the answer
 changes the whole pass.
 
+**Decide what kind of space each part is.** Constructed spaces (rooms, corridors, machinery) are
+clean, grid-snapped blocks. Broken or natural ones (rock, terrain, ruins, collapse) need uneven
+silhouettes that jittered boxes never give, so they get a generated or modelled mesh, off the
+grid. A built room inside a cave builds each part its own way and makes the seam deliberate.
+Either way, the walkable surface follows the metrics.
+
 Build the map in greybox: untextured geometry at exact metric scale, a grid material that shows
 metres, and simple colours for meaning (walkable, climbable, hazard, goal). No props, no dressing,
 and only rough lighting: enough to see, and a first pass at lighting the way on (step 8).
-[references/blockout.md](references/blockout.md) has the Unity side.
+[references/blockout.md](references/blockout.md) has the Unity side, the kinds of space, and how
+to build areas from a script the developer can still hand-edit afterwards.
 
 The level is a scene, but the scene should hold as little as possible, per `unity-scene-habits`:
 each area of the level is a prefab, the scene places them and holds the lighting and environment
@@ -148,7 +155,7 @@ settings, which have nowhere else to go. Two people can then work on two areas w
 the same file. Split into additive scenes only when there is a concrete reason, such as streaming
 or genuinely parallel work, because the loading code that comes with it tends to grow.
 
-Snap everything in the blockout to the grid. Irregularity comes later, in dressing, and never
+Snap everything constructed to the grid. Irregularity comes later, in dressing, and never
 changes a metric.
 
 ## 6. Prove it plays
@@ -188,6 +195,11 @@ place from step 3: who was here, what they did, what broke. Follow
   walls and where work happens.
 - Dressing never changes gameplay. Cover heights, jump gaps, doorways and the critical path keep
   their metric values; rerun step 6 after dressing to prove it.
+
+Show the developer the look early, with a screenshot: "too clean" or "wrong texture scale" is
+cheap to fix in the first area and expensive in the last. For a look they will judge (a prop, a
+material, a set piece), draw 3 to 5 variants as one sheet first, the current version first, and
+build the one they pick. The sheet needs no editor, so it can run alongside the build.
 
 ## 8. Light and guide
 
