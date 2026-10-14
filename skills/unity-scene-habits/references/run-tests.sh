@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
-# Run Unity tests in the user's open editor through the Unity CLI, with the preflight that makes
-# the run trustworthy. A template: copy it into the project once and check the lines marked
-# CHECK against your editor (`unity command --query <name> --detail full`).
+# Run Unity tests in an open editor through the Unity CLI, with the preflight that makes the run
+# trustworthy. This is the connected-path runner; the default is batch mode, editor closed
+# (batch-tests.sh). A template: copy it into the project once and check the lines marked CHECK
+# against your editor (`unity command --query <name> --detail full`).
 # Why each step exists: connected-editor.md, "Running tests from a worker".
+# FOCUS_CMD pulls the editor to the front before every run, because an unfocused editor stalls.
+# That steals the user's window while they work, which is one reason batch is the default.
 #
 #   run-tests.sh [--mode EditMode|PlayMode] [--category NAME] [--save-scenes] [--queue DIR] [NAME...]
 #
@@ -13,7 +16,8 @@
 # Set UNITY_PROJECT_PATH when several editors are open.
 #
 # Exit: 0 passed, 1 a test failed or nothing ran, 2 preflight failed, 3 the editor stopped
-# answering (likely a modal dialog: stop and ask the user), 4 no turn in the queue.
+# answering (a locked screen, an unfocused editor or a modal dialog: run editor-recover.sh once
+# and retry), 4 no turn in the queue.
 
 set -u
 
@@ -24,7 +28,7 @@ while [ $# -gt 0 ]; do
     --category)    CATEGORY=$2; shift 2 ;;
     --save-scenes) SAVE=1; shift ;;
     --queue)       QUEUE=$2; shift 2 ;;
-    -h|--help)     sed -n '2,16p' "$0"; exit 0 ;;
+    -h|--help)     sed -n '2,20p' "$0"; exit 0 ;;
     *)             NAMES+=("$1"); shift ;;
   esac
 done
@@ -52,10 +56,10 @@ die() { say "$2"; exit "$1"; }
 # One CLI call, output to a file so nothing in the shell rewrites it. Returns the CLI's status.
 u() { unity command "$@" --json --no-banner > "$OUT/last.json" 2>&1; }
 
-# A main-thread timeout means a modal dialog, not a slow editor. Never keep polling past it.
+# A main-thread timeout means a stalled editor, not a slow one. Never keep polling past it.
 stuck() {
   if grep -qiE 'timed? ?out|main thread' "$OUT/last.json"; then
-    die 3 "editor stopped answering on '$1': a modal dialog, or a run longer than its timeout. Stop and ask the user to look."
+    die 3 "editor stopped answering on '$1': a locked screen, an unfocused editor or a modal dialog. Run editor-recover.sh once and retry; report if it does not exit 0."
   fi
 }
 

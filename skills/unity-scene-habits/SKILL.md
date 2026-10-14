@@ -1,13 +1,15 @@
 ---
 name: unity-scene-habits
 description: >
-  Prefab-first habits for working in a Unity project through the editor CLI: turn anything
-  groupable into a prefab, make changes as prefab-asset edits instead of scene edits, keep the
-  scene out of the diff unless the task genuinely needs it, never break an asset reference, and
-  say so at the end when another branch already edits the same scene. Use when the work touches a
-  scene, a prefab, an asset or the editor itself: "add this to the scene", "make this a prefab",
-  "why does my scene keep conflicting", "run Unity headless", "-executeMethod",
-  "/unity-scene-habits", or any change that would touch a `.unity`, `.prefab` or `.meta` file.
+  Prefab-first habits for working in a Unity project through the Unity CLI, in batch mode with
+  the editor closed by default and a live editor only on demand: turn anything groupable into a
+  prefab, make changes as prefab-asset edits instead of scene edits, keep the scene out of the
+  diff unless the task genuinely needs it, never break an asset reference, and say so at the end
+  when another branch already edits the same scene. Use when the work touches a scene, a prefab,
+  an asset or the editor itself: "add this to the scene", "make this a prefab", "why does my
+  scene keep conflicting", "run Unity headless", "batch mode", "-executeMethod", "the editor
+  stopped answering", "/unity-scene-habits", or any change that would touch a `.unity`,
+  `.prefab` or `.meta` file.
 ---
 
 # Unity scene habits
@@ -44,26 +46,28 @@ if command -v unity >/dev/null; then
   unity pipeline list --json --no-banner          # which editors are running
   unity status --json --no-banner                 # which of them are connected and ready
 else
-  echo "no unity CLI — batch mode only"
+  echo "no unity CLI — batch mode with the raw editor binary"
 fi
 ```
 
-**Pick the path from the editor version.** Pipeline needs **6.0 or newer**; that floor is not
-negotiable and no amount of CLI version will move it.
+**The probe decides batch or connected. Batch is the default.**
 
-| Project editor | Path | Reference |
+| Situation | Path | Reference |
 |---|---|---|
-| 6.0+, editor running, Pipeline installed | Connected editor — `unity command eval`, `[CliCommand]` | [references/connected-editor.md](references/connected-editor.md) |
-| 2022 LTS or older, no editor running, or CI | Batch mode — `-executeMethod` | [references/batch-mode.md](references/batch-mode.md) |
+| Editor closed (any version, CI) | **Batch mode, the default**: `unity run … -executeMethod`, `unity test` | [references/batch-mode.md](references/batch-mode.md) |
+| A job that needs a live editor, 6.0+ with Pipeline | Connected, on demand: open, do the job, close | [references/connected-editor.md](references/connected-editor.md) |
+| An editor already has the project | Probably the user's. Ask; never drive it or close it | below |
 
-Prefer the connected path when it is available. Batch mode pays an editor boot and a script
-recompile per change; the connected path answers in milliseconds against the already-loaded
-project.
+Batch opens no window, takes no focus and does not stall when the screen locks; with a warm
+`Library/` a call takes about 10 s. Connected is only for jobs that need a live editor:
+interactive inspection, `eval` loops while debugging, and anything the user asked to watch.
+Pipeline needs **6.0 or newer**; that floor is not negotiable.
 
-With Pipeline installed but no editor open, do not open one on your own: it takes a window and
-the user's focus. Ask the user once whether to (a manager asks at kickoff). If the editor closes
-mid-session, carry on in batch mode without asking again. Never open the editor while a batch
-job is running; it takes the project lock and the job fails.
+Open an editor only for such a job, close it when the job is done, and never open one while a
+batch job is running: it takes the project lock and the job fails. **If an editor is already
+open, find out whose it is before doing anything.** The user may be testing in it. While they
+are, do no Unity work at all, since batch cannot run against their lock; keep doing non-Unity
+work and resume when they close it.
 
 **Confirm the editor is reachable before any connected work.** `unity status --json` should list
 this project in state `ready`. Two things make a running editor look absent, and neither means
@@ -150,8 +154,41 @@ behaviour change that prompted it.
 
 ## 3. Do the work
 
-**Connected editor (6.0+).** Run C# straight against the live editor — no script file, no
-recompile, no domain reload:
+**Batch mode, by default.** One static method per run, with the editor closed:
+
+```bash
+unity run "$ROOT" --timeout 900 --no-tail -l /tmp/unity.log -- -executeMethod CliTask.Run; echo "exit $?"
+unity test "$ROOT" --mode EditMode --filter Inventory --output /tmp/edit.xml
+```
+
+Without the Unity CLI, the raw binary does the same:
+
+```bash
+"$UNITY" -batchmode -quit -nographics \
+  -projectPath "$ROOT" -executeMethod CliTask.Run \
+  -logFile - > /tmp/unity.log 2>&1; echo "exit $?"
+tail -40 /tmp/unity.log
+```
+
+Keep the whole log — a failing run is exactly when you need the lines a `tail` would have thrown
+away. Two flags deserve a decision rather than a habit: `-nographics` is right for asset work and
+starts faster, but leave it off test runs and anything that renders; and **`-accept-apiupdate`
+is not a default**, because it lets the API updater rewrite source across the project and bury a
+one-line prefab change in a thousand-line diff. If a run fails needing it, that is the user's
+decision, not a flag you add to get past an error. Batch PlayMode runs still play sound; one
+editor script mutes them ([references/batch-mode.md](references/batch-mode.md), "Mute batch
+runs").
+
+The task script lives in a fixed, ignored folder — `Assets/Editor/CliTasks/` — and stays there
+between runs. Creating and deleting it each time forces two full script recompiles per task.
+[references/batch-mode.md](references/batch-mode.md) has the CLI wrappers, the scaffold, the
+flag list, the licensing failure and how to read the log, and
+[references/batch-tests.sh](references/batch-tests.sh) runs tests in one command.
+
+**Connected editor, on demand (6.0+).** Only for a job that needs a live editor. Open it, do the
+job, close it ([references/connected-editor.md](references/connected-editor.md), "On demand, then
+close"), with [references/editor-recover.sh](references/editor-recover.sh) behind every job. Run
+C# straight against the live editor — no script file, no recompile, no domain reload:
 
 ```bash
 unity command eval "return UnityEditor.AssetDatabase.FindAssets(\"t:Prefab\").Length;" --json
@@ -163,32 +200,13 @@ running `unity pipeline install`** — that is a dependency decision, not a deta
 [references/connected-editor.md](references/connected-editor.md) has the command surface, the
 result-reading traps, and the rest.
 
-**Batch mode (older editors, CI, no editor running).** One static method per run:
-
-```bash
-"$UNITY" -batchmode -quit -nographics \
-  -projectPath "$ROOT" -executeMethod CliTask.Run \
-  -logFile - > /tmp/unity.log 2>&1; echo "exit $?"
-tail -40 /tmp/unity.log
-```
-
-Keep the whole log — a failing run is exactly when you need the lines a `tail` would have thrown
-away. Two flags deserve a decision rather than a habit: `-nographics` is right for asset work and
-starts faster, but drop it when the task renders; and **`-accept-apiupdate` is not a default**,
-because it lets the API updater rewrite source across the project and bury a one-line prefab
-change in a thousand-line diff. If a run fails needing it, that is the user's decision, not a
-flag you add to get past an error.
-
-The task script lives in a fixed, ignored folder — `Assets/Editor/CliTasks/` — and stays there
-between runs. Creating and deleting it each time forces two full script recompiles per task.
-[references/batch-mode.md](references/batch-mode.md) has the scaffold, the flag list, the
-licensing failure and how to read the log.
-
 Code that generates assets the project commits is not throwaway, so it does not live there. It
 goes in committed builders that rerun without changing anything;
 [references/builders.md](references/builders.md) has the rules, the changes the editor makes on
-its own, and when a setting needs a test instead of a convention. Workers write scene and prefab
-changes as builders first and run them in one editor pass per task (`unity-agent-worker`,
+its own, and when a setting needs a test instead of a convention. Models generated outside Unity
+by a script, such as headless Blender, follow
+[references/generated-assets.md](references/generated-assets.md). Workers write scene and prefab
+changes as builders first and run them in one Unity pass per task (`unity-agent-worker`,
 `references/files-first.md`).
 
 Edit prefab assets directly — never by dragging an instance into a scene and applying overrides.
@@ -240,7 +258,8 @@ grep -nE 'error CS|Exception|Aborting|No valid Unity Editor license' /tmp/unity.
 ```
 
 An `error CS…` means the project did not compile, so the task never ran — and the error may be
-someone else's, not yours. Report it; do not paper over it.
+someone else's, not yours. Report it; do not paper over it. `Exiting batchmode successfully`
+means the method ran. A `unity test` run is judged by its NUnit report, not its console.
 
 On the connected path, read the JSON payload rather than the exit code. Some commands return
 `"success": true` with empty `data` and exit 0 when the answer is "nothing found". `unity command`

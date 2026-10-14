@@ -13,8 +13,8 @@ Write it as two files, a common brief and a task brief, and keep the prompt itse
 
 Tell it to invoke `unity-agent-worker` and follow it for the whole task. That skill already
 carries the process: project rules first, milestones, engine work through `unity-scene-habits`,
-files first and one editor pass through the test script, the gate before every commit, never
-push. Your prompt supplies what it cannot know and pre-answers what it would otherwise stop on.
+files first and one batch Unity pass, the gate before every commit, never push. Your prompt
+supplies what it cannot know and pre-answers what it would otherwise stop on.
 
 ## What every prompt must contain
 
@@ -42,17 +42,17 @@ few lines on top of the common brief.
   every deliverable also needs a test that fails if the behaviour breaks, driven through test
   seams and deterministic (`unity-coding-habits`, `references/testing.md`), and that the
   checklist is still written, for the combined sign-off at the end of the session.
-- **A hard test budget**: "at most N test runs", the filter to use (a category or test names),
-  and whether this worker runs the full suite before its last commit or leaves it to the end of
-  the session.
+- **A hard test budget**: "at most N full runs", the filter to use for the cheap filtered runs
+  (a category or test names), whether this worker runs the full suite, and the known-flake list.
 - **Which scenes and prefabs this task is allowed to touch**, and which it must not. This is the
   conflict map, handed down. If it needs something outside that set, it reports rather than
   spreading.
 - **Whether a scene change is expected at all.** Most tasks should come back with an empty
   `git diff -- '*.unity'`. Say so explicitly, so an unexpected scene diff is visibly wrong rather
   than quietly accepted.
-- **Where the test script is** (`session-materials/run-tests.sh`), and the compile check outside
-  the editor if one works in this project. In speed mode, the lane (files or editor) and the
+- **The editor mode and where the scripts are** (`session-materials/batch-tests.sh`, and for the
+  connected path `run-tests.sh` and `editor-recover.sh`), and the compile check outside the
+  editor if one works in this project. In speed mode, the lane (files or editor) and the
   editor queue, `session-materials/editor-queue/`.
 - **The shared-checkout rules, verbatim** (next section).
 - **You must NOT spawn subagents.** Do all the work yourself.
@@ -93,17 +93,35 @@ few lines on top of the common brief.
 - Every new asset is committed **with its `.meta`**. An asset without its meta gives everyone
   else a fresh GUID on import and silently breaks every reference to it.
 
-## Editor work, verbatim
+## Editor mode: BATCH, verbatim
 
-A Unity project can be held by one editor at a time and an import is expensive, so only one
-agent uses the editor at a time. You drive it yourself.
+The default. A Unity project can be held by one editor at a time, batch included, and an import
+is expensive, so only one agent uses Unity at a time. You run it yourself, with the editor
+closed.
 
-1. Work in files first. Use the editor in one pass at the end of the task: builders, tests and
-   the final compile together (`unity-agent-worker`, `references/files-first.md`).
+1. Work in files first. Use Unity in one pass at the end of the task (`unity-agent-worker`,
+   `references/files-first.md`): one `unity run "$ROOT" --timeout 900 --no-tail -l <log> --
+   -executeMethod <Type.Method>` per group of builders, filtered tests, then the full run if it is
+   yours.
+2. Run tests with `session-materials/batch-tests.sh --mode EditMode|PlayMode [names]`. No window
+   opens and nothing needs focus.
+3. **Exit 2, "an editor holds the project"**: the user is probably testing. Never close their
+   editor. Do the non-Unity part of the task, then report.
+4. A build or an import check runs in the same pass, one at a time.
+5. If the task needs a live editor (interactive inspection, something the user asked to watch),
+   say so in your report rather than opening one, unless this brief allows it.
+
+## Editor mode: CONNECTED, verbatim
+
+Only when the user chose it at kickoff, or this brief allows a live editor for one job.
+
+1. Open the editor only if it is not open, do the job, close it again (`unity-scene-habits`,
+   `references/connected-editor.md`, "On demand, then close"). Never drive an editor the user is
+   working in.
 2. Run tests with `session-materials/run-tests.sh`. It refreshes, recompiles, reloads, checks
    the editor is ready and no scene is dirty, then runs.
-3. **Exit 3**: the editor stopped answering, almost always a modal dialog. Stop and report; do
-   not retry.
-4. A build or an import check runs in the same pass, one at a time.
-5. If this brief names an editor agent instead, send it the branch, exactly what to run and what
+3. **Exit 3**: the editor stopped answering. Run `session-materials/editor-recover.sh` once and
+   retry once. Its exit 6 means the screen is locked and the editor was closed: carry on in batch
+   mode. Exit 5, or a second exit 3: stop and report.
+4. If this brief names an editor agent instead, send it the branch, exactly what to run and what
    counts as pass, one request at a time. To wait, end your turn: the reply resumes you.

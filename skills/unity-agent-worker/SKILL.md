@@ -3,7 +3,7 @@ name: unity-agent-worker
 description: >
   Carry one Unity task end to end in the user's own checkout: read the project's rules first,
   work in verifiable milestones, do all engine work through `unity-scene-habits` (prefab-first,
-  editor CLI, never hand-edit YAML), work in files first and use the editor in one pass, keep
+  Unity CLI, never hand-edit YAML), work in files first and use Unity in one batch pass, keep
   every new asset paired with its `.meta`, verify before every commit, and never push or switch
   branches. Use when handed a single Unity task to implement — by a user, or as a worker spawned
   by `unity-manage-work`.
@@ -27,7 +27,7 @@ these hold:
 - It touches a handful of existing files and adds no new script.
 - The brief says exactly what to change. Nothing is left to design.
 
-The quick path: read the project's `CLAUDE.md`, make the edit (straight through the editor CLI;
+The quick path: read the project's `CLAUDE.md`, make the edit (straight through the Unity CLI;
 a one-off needs no builder), run one existing test that covers the area if there is one, run the
 rung-0 checks from section 5 (every asset paired with its `.meta`, the scene diff intended), and
 commit. If nothing automated covers it, add a one-line manual check to your report. No
@@ -69,34 +69,41 @@ own: never open the editor there.
 
 Split the task into chunks that can each be *shown* to work. For each one: make the change, check
 it where that is cheap (a compile outside the editor, the intended diff), then move on. Do not
-build the whole thing and only check it at the end. Editor-backed checks, `.meta` pairing and
-test runs among them, happen in the editor pass (section 4), not per milestone.
+build the whole thing and only check it at the end. Unity-backed checks, `.meta` pairing and
+test runs among them, happen in the Unity pass (section 4), not per milestone.
 
 Prefer the smallest diff that fully solves the task. Do not delete comments or code the task does
 not require you to touch, and do not tidy things nobody asked about.
 
-## 4. Files first, then one editor pass
+## 4. Files first, then one Unity pass
 
-Most of a task needs no editor. Write it as files: C# as files, and scene, prefab and asset
+Most of a task needs no Unity at all. Write it as files: C# as files, and scene, prefab and asset
 changes as builder scripts per `unity-scene-habits` (prefab-first, edit prefab assets rather than
 scenes, never hand-edit `.unity`, `.prefab` or `.meta`). Check the compile outside the editor
-where the project has a recorded way to. Then use the editor **once per task**, or once per batch
-of small tasks: builders, tests and the final compile together. That pass creates the `.meta`
-files for new assets, so commit after it, never before. Visual and feel work is the exception
-and happens in the editor from the start. [references/files-first.md](references/files-first.md)
-has the detail.
+where the project has a recorded way to. Then use Unity **once per task**, or once per batch of
+small tasks. In batch mode, the default, with the editor closed:
 
-You drive the editor yourself, and **only one agent uses it at a time**: one project can be held
-by one editor, and an import is expensive.
+1. one `unity run … -executeMethod` per group of builders,
+2. filtered `unity test` calls for what changed,
+3. one full `unity test` per mode at the end.
 
-- **Run tests through the test script**, `unity-scene-habits`' `references/run-tests.sh`, or the
-  copy your brief names. It refreshes, recompiles with focus, reloads, checks the editor is ready
-  and no scene is dirty, and stops on a modal dialog instead of polling forever.
-- **Exit 3 means stop.** The editor stopped answering, almost always a modal dialog. Report it.
+That pass creates the `.meta` files for new assets, so commit after it, never before. Visual and
+feel work that someone has to watch is the exception and uses a live editor, on demand.
+[references/files-first.md](references/files-first.md) has the detail.
+
+You drive Unity yourself, and **only one agent uses it at a time**: one project can be held by
+one editor, batch included, and an import is expensive.
+
+- **Run batch tests through the batch test script**, `unity-scene-habits`'
+  `references/batch-tests.sh`, or the copy your brief names. Nothing to focus, no window.
+- **If an editor holds the project** (exit 2, "an editor holds the project"), it is probably the
+  user testing. Never close it. Do your non-Unity work, then report it.
+- **On the connected path**, only when your brief chose it or the job needs a live editor, run
+  tests through `references/run-tests.sh`. **Exit 3 means recover once**: run
+  `references/editor-recover.sh`, retry once, and report if it is still stuck. Its exit 6 means
+  the screen is locked and the editor was closed: carry on in batch mode.
 - **In speed mode your brief may give an editor queue**: pass `--queue <dir>`. The wait is
   bounded; on exit 4, work on something else, try once more, then report. Never loop on it.
-- **In batch mode** the editor must be closed, and it is one batch run at a time
-  (`unity-scene-habits`).
 - **The project's rule wins.** If the project's `CLAUDE.md` says who drives the editor, follow it
   over this section.
 - If your brief names an editor agent instead (`unity-manage-work`), send it the branch, exactly
@@ -140,6 +147,11 @@ done
 - **The scene diff is intended.** `git diff --stat -- '*.unity'` should be empty unless the task
   genuinely needed a scene change. If it is not and you did not mean it, revert the whole file —
   not partial hunks — before committing.
+- **No unrelated churn.** Unity runs leave things behind: prefabs and materials re-serialized
+  with default values, `ProjectSettings` flipped by a test run, `Assets/InitTestScene*.unity`.
+  Check `git status` for files outside your task, delete the leftover test scenes, and revert the
+  rest unless the task meant it (`unity-scene-habits`, `references/builders.md` lists what the
+  editor changes on its own).
 
 **Screenshots only when asked, or for real visual work**: new UI, lighting, a look the user will
 judge (`unity-scene-habits`, `references/visual-checks.md`). Never to show that an object is
@@ -150,11 +162,13 @@ that name the old thing. It does not add tests.
 
 ### The test budget
 
-Every editor-backed test run pays a recompile, a domain reload (30-90 s) and, for PlayMode,
-entering Play mode. Spend runs deliberately:
+A filtered batch run costs about 10 s with a warm `Library/`; a full suite costs far more, and a
+run in an open editor pays a recompile and a domain reload (30-90 s) on top. The budget is on
+full runs; filtered batch runs are cheap enough to use freely while working. Spend runs
+deliberately:
 
 - **Code first, tests after.** Write the whole change, or the whole batch of small tasks, then
-  test it in the editor pass. Never edit, test, edit, test per task.
+  test it in the Unity pass. Never edit, test, edit, test per task.
 - **While working, test a little, isolated only**: the filtered tests for the case at hand, by
   category or by name.
 - **At the end, one full run** to confirm nothing else broke, right before your final commit,
@@ -165,10 +179,16 @@ entering Play mode. Spend runs deliberately:
   to confirm it is real, reproduce it with that test, fix it, then rerun only those tests plus
   the area the fix touched. `references/verification.md` has the loop; the test script takes
   several names, so each rerun is one call.
-- **Stay under the number of runs your brief gives.** Needing more is a finding to report.
+- **Stay under the number of full runs your brief gives.** Needing more is a finding to report.
+- **A test that fails alone and passes on a rerun is a flake**, not your regression, if your brief
+  lists it as known. `unity test --retries 1` reports flakes as such. A new one goes in your
+  report.
+- **Assert properties, not totals.** A test that pins a count (items in a level, rooms, a loot
+  share) breaks on every content task. Test what must hold, such as "every room has an exit", or
+  use a wide band or a fixed seed for anything statistical.
 
 **Rungs 2 and 3 run once, when the task is otherwise done**: does the game start, and does it
-build. Both need the editor; run them as in section 4. They are slow; do not run them per
+build. Run them in the Unity pass, as in section 4. They are slow; do not run them per
 milestone.
 
 **Rung 4 is a human, and it blocks.** When nothing above proves the feature behaves — which on a

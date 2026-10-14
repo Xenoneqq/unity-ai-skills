@@ -119,8 +119,10 @@ longer says so: `[UnityTest, Timeout(600000)]`.
 
 ## Silence
 
-Tests run through the connected editor play their sound out of the user's speakers. Mute the whole
-test assembly with a fixture outside any namespace, which NUnit applies to every test in it:
+Tests play their sound out of the user's speakers, in batch mode as much as in the open editor.
+Batch editors are muted by one editor script (`unity-scene-habits`, `references/batch-mode.md`,
+"Mute batch runs"). For runs in the open editor, mute the whole test assembly with a fixture
+outside any namespace, which NUnit applies to every test in it:
 
 ```csharp
 [SetUpFixture]

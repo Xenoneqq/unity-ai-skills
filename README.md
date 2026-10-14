@@ -47,7 +47,9 @@ These check and repair.
 
 Run `unity-skill-package-setup` once on a project. It writes a `CLAUDE.md` that routes each kind of work to the right skill, so the rest fire on their own.
 
-After that, reach for `unity-manage-work` when there is a list to get through and `unity-agent-worker` for a single task. `unity-scene-habits` sits underneath both whenever the engine is involved. Work runs one writer at a time in your own checkout, written as files first with one editor pass per task, and small edits skip most of the process. Parallel writers are an opt-in speed mode.
+After that, reach for `unity-manage-work` when there is a list to get through and `unity-agent-worker` for a single task. `unity-scene-habits` sits underneath both whenever the engine is involved. Work runs one writer at a time in your own checkout, written as files first with one Unity pass per task, and small edits skip most of the process. Parallel writers are an opt-in speed mode.
+
+Agents run Unity in batch mode by default, with the editor closed. Builders and tests run headless, so no window opens, nothing steals your focus, and a locked screen does not stall the work. The editor is yours: agents open it only for the few jobs that need a live one and close it again, and when work is done they ask whether you want to test, open the project on the right branch and tell you what to try. While you have it open they leave Unity alone and keep doing everything else.
 
 The same rules run through all of them. Prefer prefabs to scenes. Never hand-edit Unity's YAML or meta files, because the editor is the only safe writer. Never claim a change is verified further than it actually was.
 

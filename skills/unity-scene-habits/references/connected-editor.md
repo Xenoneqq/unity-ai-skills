@@ -1,8 +1,10 @@
 # Driving a running editor
 
-This is the fast path. It needs the Unity CLI, an editor **6.0 or newer**, that editor running
-with the project open, and the Pipeline package installed. When any of those is missing, use
-[batch-mode.md](batch-mode.md) instead.
+This is the on-demand path. Batch mode, with the editor closed, is the default
+([batch-mode.md](batch-mode.md)); a live editor is for the jobs that need one: interactive
+inspection, `eval` loops while debugging, and anything the user asked to watch. It needs the
+Unity CLI, an editor **6.0 or newer**, that editor running with the project open, and the
+Pipeline package installed. When any of those is missing, stay in batch mode.
 
 Everything here was checked against Unity CLI `1.0.0-beta.10`. It is beta software and the
 Pipeline package is pre-1.0 (`0.x-exp`), so treat command surfaces as liable to shift, and
@@ -41,6 +43,24 @@ background, and if no Unity process appears within about a minute, launch the ed
 with `unity open -e <location>` or the binary itself with `-projectPath "$ROOT"`, taking the
 location from `unity editors -i --verbose`. Then poll `unity pipeline list` for `isReachable` in
 a bounded loop (for example every 10 s, 30 times), never an open-ended wait.
+
+## On demand, then close
+
+An editor an agent opened is closed again when the job is done. Leaving it open holds the
+project lock, so every batch job after it fails, and on a laptop it stalls the moment the screen
+locks.
+
+1. **Check nobody is in it.** If an editor already has the project, it is probably the user's,
+   and they may be testing. Ask; never drive it or close it without a yes.
+2. **Open and wait for ready:** `unity open "$ROOT"` in the background, then
+   `unity status --project-path "$ROOT" --until-ready --timeout 300` and one
+   `unity command editor_status` that returns success.
+3. **Do the job.**
+4. **Close it:** `unity close "$ROOT"`. `--force` only for a wedged editor the agent itself opened,
+   since `close` exits without saving.
+
+Every connected job sits behind [editor-recover.sh](editor-recover.sh): when the editor stops
+answering, run it once before reporting anything.
 
 ## Installing the package
 
@@ -107,10 +127,10 @@ unity command eval "return UnityEditor.EditorApplication.isPlaying;"
 unity command eval_file path/to/script.cs --json
 ```
 
-This is the whole reason to prefer this path. Batch mode pays an editor boot and a script
-recompile for every single change; `eval` answers in milliseconds against the project already
-loaded. For an iterative task — inspect a prefab, change it, check the result — the difference
-is minutes against seconds.
+This is what the path is for. Batch mode pays an editor boot for every call; `eval` answers in
+milliseconds against the project already loaded. For an interactive loop, such as inspecting a
+prefab, changing it and checking the result while debugging, that is worth opening the editor
+for. For a builder run or a test run it is not: batch does those without a window.
 
 For something you will run more than once, register it instead of re-pasting it. Any static
 method with the attribute becomes a command, with no separate registration step:
@@ -138,6 +158,10 @@ Useful flags on `unity command`: `--project-path` when several projects are open
 `--timeout <seconds>` (default 30) for slow work, `--result-only` for just the JSON result
 without the envelope, and `--detach` to submit a long job and get an id back immediately —
 `unity job` then manages it.
+
+A long builder through `eval` can hit the main-thread timeout even though it finishes, and the
+caller sees a failure. Submit it with `--detach` and wait with `unity job wait`, or run the
+builder in batch mode, which has no such timeout.
 
 Before assuming a CLI verb works on this path, look for the in-editor command that does the job:
 `unity command --query <term>`. Several top-level verbs start their own batch editor instead (see
@@ -212,7 +236,7 @@ unity command list_tests
 - **PlayMode** must run async. Entering Play mode reloads the domain, which drops a synchronous
   request.
 - **`--filter`** is a substring match, not a regex: `"A|B"` matches nothing.
-- **Audio** plays through the user's speakers here, unlike batch mode. Test assemblies mute it for
+- **Audio** plays through the user's speakers, here and in batch mode. Test assemblies mute it for
   the whole run and restore it after (`unity-coding-habits`).
 
 ## Running tests from a worker
@@ -238,8 +262,10 @@ retyping the steps. Each step fixes a failure seen in practice:
 5. **Keep focus while polling.** Play mode and tests only advance while the editor has focus.
 6. **An instant `total 0` from a filtered run is a failure**, not a pass. Reload and rerun once,
    then report.
-7. **A main-thread timeout means stop.** It is almost always a modal dialog. Report it; never
-   keep polling.
+7. **A main-thread timeout means recover, not poll.** On a laptop it is usually a locked screen
+   or an unfocused editor, less often a modal dialog. Run [editor-recover.sh](editor-recover.sh)
+   once: it checks the lock, leaves Play mode, then relaunches. Ask the user only if the relaunch
+   fails or a startup dialog appears.
 8. **Several names in one call.** `--filter` is a substring match and `"A|B"` matches nothing, so
    the script loops over the names it is given. Rerunning only the failures is one call.
 
@@ -274,14 +300,23 @@ unity command build_status              # poll until completed
 
 ## Sharing the editor with the user
 
-On this path agents work inside the user's own session. While a worker runs, the editor is
-look-only for the user: no saving scenes or prefabs, no entering Play mode. Say so at kickoff.
+Two cases, and they point opposite ways:
+
+- **The user has the editor open** (testing, or working). Agents do no Unity work at all: batch
+  cannot run against the project lock, and driving the user's editor is not ours to do. Non-Unity
+  work carries on: code, art, docs, reviews. Resume when they close it.
+- **The user chose the connected path** for a session, to watch. While a worker runs, the editor
+  is look-only for the user: no saving scenes or prefabs, no entering Play mode. Say so at kickoff.
+
+On the connected path agents work inside the user's own session, so:
 
 - **Never change an open scene or prefab on disk.** Modifying, restoring, checking out or
   deleting a `.unity` or `.prefab` the editor has open raises a modal "changed on disk" dialog
   that blocks the main thread. Open another scene first, change the file, then reopen it.
 - **A blocked editor looks idle.** Requests time out on the main thread while the CPU sits idle
-  and the log is quiet. That is a modal dialog. Stop retrying and ask the user to look.
+  and the log is quiet. Check for a locked screen first; otherwise it is likely a modal dialog.
+  Stop retrying, run [editor-recover.sh](editor-recover.sh) once if the agent opened this editor,
+  and ask the user to look if it is theirs.
 - **Refuse to open a scene over unsaved changes.** A builder that opens a scene while the user has
   unsaved edits discards them. Task scripts check for dirty scenes first (see
   [batch-mode.md](batch-mode.md)).

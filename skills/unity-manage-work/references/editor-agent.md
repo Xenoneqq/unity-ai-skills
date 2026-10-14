@@ -1,9 +1,9 @@
 # The editor agent
 
-**Optional.** By default the writer drives the editor itself through the test script (Step 5a),
-which in practice is several times faster. Use a shared editor agent only when that does not
-fit: batch mode driven from a weak manager, or the user asks for one. If the project's
-`CLAUDE.md` says who drives the editor, that wins.
+**Connected path only, and optional.** By default the writer runs Unity itself in batch mode
+(Step 5a), and under batch mode there is no shared editor agent. Use one only on the connected
+path when the writer driving the editor does not fit: a weak manager, or the user asks for one.
+If the project's `CLAUDE.md` says who drives the editor, that wins.
 
 A Unity project can be held by **one editor at a time**, and a cold import costs minutes. An
 editor agent owns the editor for a phase, and workers send it their runs.
