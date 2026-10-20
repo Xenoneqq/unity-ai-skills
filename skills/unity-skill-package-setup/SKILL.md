@@ -4,10 +4,10 @@ description: >
   Wire a Unity project up to these skills: install the plugin at project scope, write a CLAUDE.md
   and AGENTS.md that route each kind of work to the right skill and make every handed-over task
   offer to run through `unity-manage-work`, check the repo's .gitignore and scene merge setup,
-  install the Unity CLI's Pipeline package so skills can drive a running editor, offer
-  ProBuilder for a 3D game, scan what is
-  already there, generate a STRUCTURE.md describing the real project layout, and
-  scaffold the standard asset folders. Use when: "/unity-skill-package-setup", "set this
+  set agents up to run Unity in batch mode with the editor closed, install the Unity CLI's
+  Pipeline package for on-demand editor jobs, offer ProBuilder for a 3D game, scan what is
+  already there, generate a STRUCTURE.md describing the real project layout, and scaffold the
+  standard asset folders. Use when: "/unity-skill-package-setup", "set this
   project up for Claude", "link these skills to my Unity project", "add a CLAUDE.md for this
   Unity project", "scaffold the asset folders", or opening a Unity project that has no CLAUDE.md.
 ---
@@ -120,14 +120,17 @@ routing table does not change.
 
 ## 5. Connect the editor CLI
 
-The other skills drive the editor fastest through the Unity CLI's Pipeline package, which lets
-them run C# against a running editor instead of booting one in batch mode per change. Installing
-it is a one-time step per project, so it belongs here rather than in the middle of someone's
-task.
+Agents run Unity in **batch mode by default**: the editor stays closed, builders and tests run
+headless through `unity run` and `unity test`, and nothing opens a window or takes the user's
+focus (`unity-scene-habits`, `references/batch-mode.md`). That works on any editor version. The
+Unity CLI's Pipeline package is still worth installing, for the jobs that need a live editor and
+for opening the editor when the user wants to test. Installing it is a one-time step per
+project, so it belongs here rather than in the middle of someone's task.
 
 It needs the `unity` CLI and an editor **6.0 or newer**. On an older project, skip this step
-and say the other skills will use batch mode. Without the CLI, say so and point the user at
-Unity's documentation for installing it; do not install it for them.
+and say agents will use batch mode only. Without the CLI, say so and point the user at Unity's
+documentation for installing it; do not install it for them. Batch mode then uses the raw editor
+binary.
 
 ```bash
 command -v unity && unity pipeline list --json --no-banner
@@ -152,6 +155,13 @@ The grep is the check that it landed. When the user next opens the project, `uni
 list` shows the editor with Pipeline available. `unity-scene-habits` has what the connected
 path can do and how to read its results.
 
+### Mute batch runs
+
+Batch PlayMode tests still play sound through the user's speakers. Offer the one-file editor
+script from `unity-scene-habits`' `references/batch-mode.md` ("Mute batch runs"): it mutes only
+batch editors, so the user's own sessions keep sound. It is a tracked file, so ask, and put it
+in the project's editor-tools folder if it has one.
+
 ### ProBuilder, for a 3D game
 
 `unity-level-design` blocks levels out best with ProBuilder: textures line up across walls of
@@ -172,6 +182,25 @@ Do both in the same closed window so the user closes the editor once. `unity-sce
 `references/batch-mode.md` has the Package Manager recipe; the package id is
 `com.unity.probuilder`. A declined offer is fine: the level skill falls back to primitives.
 Record the answer, and Pipeline's, in the generated `CLAUDE.md`, so no later skill asks again.
+
+### A PlayMode test assembly
+
+End-to-end PlayMode tests driven through the game's public API beat the ad-hoc play-tests
+through `eval` that every worker otherwise rewrites. Check whether the project has one:
+
+```bash
+find "$ROOT/Assets" -name '*.asmdef' -not -path '*/ThirdParty/*' -print0 |
+  while IFS= read -r -d '' f; do
+    grep -qE 'UNITY_INCLUDE_TESTS|TestAssemblies' "$f" || continue
+    grep -q '"Editor"' "$f" && echo "EditMode tests: $f" || echo "PlayMode tests: $f"
+  done
+```
+
+If there is none, offer one in the same question as the packages. Its tests can only reference
+game code that lives in an assembly definition of its own. When the code is not in one yet,
+moving it is a task for the backlog (Step 2), not a setup step, so offer the test assembly as
+part of that task. Real input and game feel stay manual checks either way. `unity-coding-habits`
+has how to write the tests.
 
 ## 6. Scaffold the asset folders
 
@@ -235,6 +264,18 @@ Read `references/project-memory.md` for the content. In short, the generated `CL
   `unity-manage-work` before starting, and only proceed directly if they decline.
 - The project's own hard rules: prefab-first, never hand-edit `.unity`/`.prefab`/`.meta`, every
   asset committed with its meta, and a pointer to `STRUCTURE.md` for where things go.
+- **How agents drive Unity**: batch mode with the editor closed by default, the editor opened
+  only on demand and closed again, and the user asked to test in the editor when work is done.
+  Ask whether the user works on the same machine; if so, batch is the rule, not just the default.
+- **Who drives Unity** (the agent doing the task, by default) and **whether agents may save the
+  open scene** through the editor. Ask the user both; connected test runs in
+  `unity-scene-habits` depend on the second.
+- **How agents work here**, as pointers to the skills rather than copies: files first, with the
+  compile check outside the editor once it is established; isolated tests while working, one
+  full run at the end, and list, isolate, test, fix when it breaks; one writer at a time, with
+  speed mode only on request; the preferred branch mode if the user has one (one session
+  branch, or stacked branches per task); and the preferred autonomy mode (full automatic, semi
+  automatic or human assisted). Without a preference, the manager asks both at kickoff.
 
 `AGENTS.md` covers the same ground for tools that read that filename instead. Write it as a short
 file that points at `CLAUDE.md` rather than duplicating it — two copies of the same rules drift.
@@ -246,13 +287,19 @@ ls "$REPO/CLAUDE.md" "$REPO/AGENTS.md" "$REPO/STRUCTURE.md"
 git -C "$REPO" status --short
 ```
 
+Then prove batch mode works, with the editor closed: one batch builder or task method and one
+filtered EditMode test (`unity-scene-habits`, `references/batch-mode.md`). That also proves the
+licence works headless, which is the most common thing to find broken. Skip it if an editor has
+the project open, and say so. A project with no tests yet gets the builder run alone.
+
 Then tell the user, in this order:
 
 1. **Anything broken that they must decide on**, first: an ignored `.meta`, serialization not
    set to Force Text, `UserSettings/` committed, a missing editor version, no licence.
 2. What you created, and what you left alone because it already existed. Say whether the
    Pipeline package went in, was already there, or was skipped and why, and the same for
-   ProBuilder.
+   ProBuilder, the batch mute script and the PlayMode test assembly. Report the batch smoke test
+   and its timings.
 3. **The backlog from the scan** — the real work the project needs, ordered, and the offer to run
    it through `unity-manage-work`.
 4. That nothing is committed. Suggest it as its own commit — setup is not a feature change and

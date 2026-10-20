@@ -34,12 +34,29 @@ interactive, hazard, goal. If the game already has a colour language for these, 
   `Jump_03_To`. The checks in [verification.md](verification.md) read them.
 - **The spawn faces the first goal**, never a wall.
 
-## Snap everything
+## Constructed, natural or both
 
-In the blockout every position and size is a multiple of the grid unit: the kit's module size if
-there is a kit, otherwise 0.5 or 1 m in 3D and one tile in 2D. Round in the builder script
-rather than trusting typed numbers. A blockout on the grid is easy to measure, easy to read in a
-top-down capture, and easy for a kit to replace later.
+Decide per part before building it:
+
+- **Constructed** (buildings, corridors, machinery rooms): clean geometry on the grid, straight
+  edges, one wall thickness. Blocks and ProBuilder shapes are right.
+- **Broken or natural** (terrain, rock, ruins, collapsed areas, anything grown or damaged):
+  uneven silhouettes, rounded masses, irregular edges. Boxes with jitter still read as a
+  blockout. Use a generated mesh (for example a signed-distance volume meshed in code) or a
+  modelled asset, exempt from the grid.
+- **Mixed** (a built room inside a cave): build each part its own way and make the seam
+  deliberate, with a frame, a wall or a threshold.
+
+Organic walls are fine; an organic floor is not. The walkable surface keeps the step height,
+slope limit and navigation agent from `LEVEL_METRICS.md`, so the controller and agents can
+actually walk it.
+
+## Snap everything constructed
+
+In the blockout every constructed position and size is a multiple of the grid unit: the kit's
+module size if there is a kit, otherwise 0.5 or 1 m in 3D and one tile in 2D. Round in the
+builder script rather than trusting typed numbers. A blockout on the grid is easy to measure,
+easy to read in a top-down capture, and easy for a kit to replace later.
 
 ## Building it from a script
 
@@ -72,9 +89,29 @@ against it. What that buys over primitives:
 - **People can edit it.** The developer pushes faces around in the editor, which is the normal
   level-design loop.
 
-The cost is size: ProBuilder mesh data serializes into the prefab, so its YAML grows. While greyboxing, the script is the source and re-running it rebuilds the
-prefab. Once someone starts adjusting the prefab by hand in the editor, the prefab becomes the
-source; stop regenerating it, or the next run erases their work.
+The cost is size: ProBuilder mesh data serializes into the prefab, so its YAML grows. When
+merging, drop the faces nobody can see and keep UVs anchored in world or area units, so a
+texture runs on across the merged blocks. Keep ProBuilder only for shells people will edit by
+hand; generated organic meshes are plain mesh assets, regenerated from code.
+
+### Builders the developer can still edit after
+
+Each area is a builder function, and the prefab is its output. The builder creates the areas
+that are missing and rebuilds one only when asked for it by name, updating that prefab in place
+rather than deleting and recreating it (`unity-scene-habits`, `references/builders.md`).
+
+- **Never rebuild what someone edited by hand.** Change it surgically instead: open the prefab
+  contents, add or replace only a group the builder owns, save, then compare the prefab object
+  by object. A raw diff of a prefab with new nested instances looks like mass deletion. Mirror
+  the change in the builder so a later rebuild keeps it.
+- **Shell apart from details.** Structural geometry under one root, props, decoration and
+  markers in their own groups. People edit shells by hand, and loose details mixed in make that
+  miserable.
+- **One connection contract.** If areas join, define the joint once (opening size, where it sits
+  on the bounds, floor height tolerance, open or closed) and test every area against it.
+- **Seeded rolls shift.** When variation is rolled in hierarchy order, a new rolled component
+  shifts every roll after it. Add decoration as plain objects, or inside existing variation,
+  unless reshuffling the level is acceptable.
 
 ## Keep it cheap from the start
 

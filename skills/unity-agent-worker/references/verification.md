@@ -98,6 +98,22 @@ foreach (var guid in AssetDatabase.FindAssets("t:Prefab"))
 `objectReferenceInstanceIDValue != 0` with a null value is the distinction that matters: it
 separates "points at something deleted" from "deliberately empty".
 
+## Tests, if the project has any
+
+Test a little while working: only the filtered tests for the case at hand. At the end, one full
+run confirms nothing else broke. If it breaks, do not answer with another full run:
+
+1. **List** the failures, by name, minus the known-failing baseline.
+2. **Isolate**: rerun each on its own, to confirm it is real and not flaky.
+3. **Test**: reproduce it with that failing test, so you can see the fix work.
+4. **Fix** it.
+5. **Rerun only those tests**, plus the filter for the area the fix touched. Another full run is
+   needed only if a fix touched shared core code: the player controller, the save system,
+   anything many features depend on.
+
+A failure that passes on its own rerun is flaky. Report it by name; do not hide it and do not
+chase it inside this task.
+
 ## Rung 2 — does it start
 
 Load the project's main scene, run it briefly, and check nothing threw. For most game projects
@@ -150,8 +166,8 @@ Rules:
 
 - **Name the scene and the exact steps.** "Check the drill works" is not a checklist.
 - **Say what counts as failure**, not only what counts as success.
-- **One checklist per task**, written when the task is otherwise green — not accumulated and not
-  deferred.
+- **One checklist per task**, written when the task is otherwise green, not accumulated and not
+  deferred. Batched sign-off (`unity-manage-work`) batches the confirming, never the writing.
 - A reported failure comes back as a fix round to the same worker, exactly like a review finding.
 
 ## Reporting the level

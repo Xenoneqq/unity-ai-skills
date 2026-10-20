@@ -1,29 +1,35 @@
 ---
 name: unity-manage-work
 description: >
-  Run a Unity task or backlog end to end as a MANAGER: settle the base branch with the user, cut
-  one branch, plan the order from a scene-and-prefab conflict map, delegate implementation to
-  worker subagents that follow `unity-agent-worker`, route all editor-backed work through one
-  shared editor agent, review what comes back, and close with a report and a draft PR file per
-  task. Work happens in the user's own checkout — no worktree per worker — so writers run one
-  at a time. You never write game code yourself. Nothing is ever pushed. Use when: "/unity-manage-work",
-  "manage this Unity work", "here is a list of Unity tasks, get them done", "delegate these to
-  agents", or the user hands over Unity work and wants it delivered, not investigated.
+  Run a Unity task or backlog end to end as a MANAGER: settle the base branch and branch mode
+  with the user, plan the order from a scene-and-prefab conflict map, delegate implementation to
+  worker subagents that follow `unity-agent-worker`, run Unity in batch mode with the editor
+  closed by default and one agent on it at a time, never sit idle on a block, review what comes
+  back, ask the user to test, and close with a report and a draft PR file per task. Work happens
+  in the user's own checkout — no worktree per worker — so writers run one at a time. Workers
+  write the game code; a handful of mechanical edits you may do inline. Nothing is ever pushed.
+  Use when: "/unity-manage-work", "manage this Unity work", "here is a list of Unity tasks, get
+  them done", "delegate these to agents", or the user hands over Unity work and wants it
+  delivered, not investigated.
 ---
 
 # Unity manage work
 
 You are the **MANAGER**. Planning, delegation, quality gating, reporting. Workers implement.
-You do not write game code.
+You do not write game code, apart from a handful of mechanical edits (Step 5).
 
-Flow: **base branch → intake → conflict map → order → delegate → review → human sign-off →
-report + draft PRs**.
+Flow: **base branch and autonomy mode → intake → conflict map → order → delegate → review →
+ask to test → report + draft PRs**.
+
+**Work already done?** When the work was done inline and this skill is invoked afterwards, skip
+kickoff and planning. Run only the tests (Step 4b), the commits, the sign-off (Step 6a) and the
+draft PR (Step 7).
 
 | File | Read it when |
 |---|---|
 | `references/worker-brief.md` | Spawning a worker (Step 5). Everything the prompt must carry. |
 | `references/brief-templates.md` | Writing the first brief (Step 5). The common and per-task files. |
-| `references/editor-agent.md` | Any task needs the editor (Step 5a). Runbook, queue rules, prompt. |
+| `references/editor-agent.md` | Only for the connected path with a shared editor agent (Step 5a). |
 | `references/structure-map.md` | The first task is accepted (Step 6). The game's structure map. |
 | `references/closing-out.md` | The first spawn, the first accepted task, and any pause. |
 
@@ -34,7 +40,8 @@ follow it. You do not need to re-derive it here.
 
 ## Step 0 — One checkout, one branch, one writer
 
-This skill never gives a worker its own worktree. Everything happens in the user's own checkout,
+By default this skill never gives a worker its own worktree; speed mode (Step 5b) is the one
+exception, for files-lane writers only. Everything else happens in the user's own checkout,
 with the session branch checked out. That is a deliberate trade and it sets the rules for
 everything below:
 
@@ -42,11 +49,17 @@ everything below:
   every parallel worker would pay a full asset reimport before doing any work. One shared
   checkout keeps one warm `Library`, and that is the single biggest speed-up available here.
 - **One checkout holds one branch.** Two writers cannot hold two branches at once, so
-  **implementation workers run strictly one at a time.** Never spawn two writers.
+  **implementation workers run one at a time.** That costs less than it looks: the time sinks
+  are process overhead, editor loops and slow tests, not a lack of parallel work. Game code is
+  tightly coupled (the player, managers, scenes, the NavMesh), every coordination point (a lock,
+  a message, a merge) is a new way to fail, and each task should start from a verified base.
 - **Read-only agents may run in parallel** — scouting, research, review. Up to three at once,
   and never while they could be confused for a writer.
-- **Nobody switches branches mid-session.** Not you, not a worker. The branch is cut once in
-  Step 0 and everything lands on it.
+- **Design choices run alongside the writer.** For a look the user will judge, a read-only agent
+  draws 3 to 5 variants as one sheet (current version first), the user picks, and the pick goes
+  into the next brief. It needs no editor, so it never blocks the writer.
+- **Nobody switches branches mid-session.** Not you, not a worker. Branches are cut only by you,
+  per the branch mode below, and never by checking out another base.
 - **Never `stash`, `reset --hard`, `checkout --force`, or delete a branch.** There is no
   isolated copy to fall back on. The user's working tree is the only one.
 - **One long-lived second checkout is fine** when the user wants their editor free: a viewer
@@ -63,7 +76,18 @@ git status --short
 ```
 
 2. Ask with `AskUserQuestion`: the current branch (recommended), two or three plausible others
-   by recency and naming, or Other.
+   by recency and naming, or Other. In the same question, ask the **branch mode**:
+   - **One session branch** for the whole body of work (recommended for tightly coupled work).
+     One draft PR per task, each covering its commit range.
+   - **Stacked branches, one per task or milestone**, for separate reviewable PRs. You cut each
+     next branch between tasks, on a clean tree, with `git checkout -b <task-slug>` at the
+     previous task's accepted HEAD. That changes nothing on disk, so an open editor sees no
+     reimport and no "changed on disk" dialog. Never cut a later branch back off the base
+     mid-session: it rewrites files under the open editor and drops the verified base. The user
+     merges them in order, task 1's PR first; if an earlier PR changes in review, rebasing the
+     later ones is their call.
+
+   Speed mode (Step 5b) needs a branch per task anyway, one per worktree.
 3. **The working tree must be clean before you cut the branch.** If it is dirty, show what is
    uncommitted and let the user decide. Never clean it yourself.
 4. **Settle the editor.** Check whether one has the project open. Check both the lock and a
@@ -79,24 +103,73 @@ ps -Ao pid,args | grep -i '[-]projectpath' | grep -F "$ROOT"   # [-] stops grep 
    CommandLine -like "*$ROOT*"`.
 
    An open editor matters for three reasons, and the user should hear them in one line each:
-   batch mode fails against the project lock; the editor reimports what workers write and can
-   save a scene or prefab over their change; and opening it re-saves assets on its own.
+   batch mode cannot run against its project lock; the editor reimports what workers write and
+   can save a scene or prefab over their change; and opening it re-saves assets on its own.
 
-   Then settle the path, in the same `AskUserQuestion` as the base branch:
+   Then settle the mode, in the same `AskUserQuestion` as the base branch:
 
-   - **Editor 6.0+ without the Pipeline package:** recommend installing it
-     (`unity-scene-habits`, connected-editor path). It is a manifest change, so the user
-     approves it, but it is the recommended option.
-   - **Pipeline available and no editor open:** ask once whether the agents should work in the
-     editor, so the user can watch, or headless in the background. Ask again on resume, never
-     per job. Never open an editor unasked.
-   - **Connected path chosen:** the editor is look-only for the user while a worker runs: no
-     saving scenes or prefabs, no Play mode.
-   - **Editor older than 6.0, or the user declines:** batch mode, with the editor closed. A viewer
-     clone (above) lets the user watch anyway.
+   - **Batch (recommended).** The editor stays closed, no window opens and nothing takes focus.
+     Builders and tests run headless (`unity-scene-habits`, `references/batch-mode.md`). Always
+     the default when the user is working on the same machine, and the only option below 6.0.
+   - **Connected**, when the user wants to watch the editor. Agents open it only for jobs that
+     need it, and it is look-only for the user while a worker runs: no saving scenes or prefabs,
+     no Play mode. Needs 6.0+ and the Pipeline package; recommend installing it there, as a
+     manifest change the user approves, since on-demand jobs and "ask to test" use it too.
 
-   Install the package only now or between tasks, never while a worker runs.
-5. Cut one branch off the locked base, named for the whole body of work in kebab-case.
+   Say in one line that batch cannot run while the user has the editor open, so their testing
+   pauses Unity work (not other work) until they close it. Ask again on resume, never per job.
+   Whether you may open an editor on your own is the autonomy mode's call (Step 0a). Install a
+   package only now or between tasks, never while a worker runs.
+5. **Settle the autonomy mode** (Step 0a), in the same question.
+6. **Keep the machine awake** in either automatic mode, macOS only and optional: a locked screen
+   stalls an open editor's main thread, and a sleeping Mac stops everything, batch included. Check a keep-awake tool the user already has
+   (Amphetamine: `osascript -e 'tell application "Amphetamine" to return session is active'`, and
+   `start new session` to turn it on), else `caffeinate -dimsu -t <session length in seconds> &`, so it cannot outlive the session. Say you did.
+   Batch needs no display, so it should keep going through a locked screen (not yet verified),
+   but nothing survives the machine going to sleep.
+7. Cut the first branch off the locked base in kebab-case, named for the whole body of work or,
+   with stacked branches, for the first task.
+
+## Step 0a — The autonomy mode
+
+How far the agents go on their own. Ask at kickoff, recommend semi automatic, and record the
+answer in `decisions.md` and `brief-common.md`.
+
+| | Full automatic | Semi automatic (recommended) | Human assisted |
+|---|---|---|---|
+| **Unity** | Batch, and opens, uses and closes a live editor itself when a job needs one | Batch freely. Anything that takes over the machine is asked first, without blocking | Same as semi automatic |
+| **Asking the user** | Never mid-session, apart from the always-ask list | Only before interrupting actions, and the always-ask list | At real decision moments too, rarely and in bulk |
+| **Sign-off** | Deferred: tests are the gate, one ask to test at the end (6b) | Small tasks together; risky ones asked per task, without blocking | Per task for risky work, blocking (6a) |
+
+**Interrupting actions** are anything that takes the user's machine or focus: opening the
+editor, bringing a window to the front, closing an editor, a long full-screen build. In semi
+automatic, ask for one in a message (Pinging the user, below), never with a question tool that
+stops you, and queue it in `session-materials/queue.md`. Carry on with everything else; run the
+queued action when the answer comes.
+
+**Human assisted** may ask about approach, scope edges or trade-offs, the questions Step 4a
+otherwise answers for the user. Ask rarely: hold a question until several have gathered, or until
+one blocks all remaining work, then ask them together.
+
+**The always-ask list holds in every mode**: anything destructive or irreversible, an editor
+upgrade, a package install, a hard external block, a discovery that invalidates the task list
+(Step 4a). In full automatic these are asked without blocking too: mark the task **BLOCKED** and
+move on.
+
+**The user switches modes at any time**, in their own words: "you're on your own" means full
+automatic, "ask before opening Unity" means semi automatic, "check with me" means human assisted.
+Switch at once and confirm in one line what changes, for example: "Full automatic: I'll open and
+close the editor myself and save all sign-off for the end." Log the switch with the time in
+`decisions.md` and patch `brief-common.md` before the next spawn.
+
+### Pinging the user
+
+Whenever you need something from the user, in any mode: say it in the conversation **and** send
+a phone notification, with a push-notification tool if one is available. Keep it to one line:
+what you need and what waits on it. No answer in 15 minutes: ping again, at most twice more,
+through a scheduled wake-up rather than a polling loop. After the third ping, stop waiting: log
+it in `blockers.md`, mark what depends on it **BLOCKED**, keep the rest moving, and put it in the
+report.
 
 ---
 
@@ -109,6 +182,7 @@ ps -Ao pid,args | grep -i '[-]projectpath' | grep -F "$ROOT"   # [-] stops grep 
    - **A task about how UI looks**, not only what it does ("make the UI look good", "design the
      HUD"), goes through `unity-ui-design`: direction, style plan and a mockup the user approves
      come before any implementation task. A function-only UI task does not need it.
+   - **A greybox or blockout** gets one kickoff question: real models or blocks?
 4. Resolve open decisions **now**. Kickoff is the one moment the user is expected to be present;
    batch every genuine ambiguity into the same `AskUserQuestion` as the base branch. Capture
    answers verbatim — they go into worker prompts.
@@ -116,7 +190,12 @@ ps -Ao pid,args | grep -i '[-]projectpath' | grep -F "$ROOT"   # [-] stops grep 
    get exact anchor files: where prefabs live, which assembly definitions exist, what the
    managers are called, which scenes are the contested ones.
 
-Restate the task list to the user, one line each, before spawning anything.
+Restate the task list to the user before spawning anything: one line each, with a rough time
+estimate per task, so the user can cut scope before work starts.
+
+Keep the plan as one table in `session-materials/plan.md`, cheap to amend. Mid-session requests
+from the user are common: log each one verbatim in `decisions.md` before scheduling it, then add
+its row.
 
 ---
 
@@ -143,7 +222,8 @@ For every task write down what it touches, in this order of danger:
 | Assets, `.meta`, `ProjectSettings` | Binary or structurally unmergeable. Treat any overlap as a hard conflict. |
 | C# only | Ordinary text. Normal merge rules apply. |
 
-Because writers are sequential, this map decides **order**, not parallelism:
+Because writers are sequential by default, this map decides **order** (in speed mode it is also
+the proof that tasks do not overlap):
 
 - Tasks touching the same scene or prefab go **adjacent and ordered**, never interleaved, so a
   half-finished change never sits under the next one.
@@ -158,6 +238,8 @@ Size and shape the tasks while you are at it:
 
 - **Split anything big.** A task likely to run past 30-40 minutes or about 100 tool calls is
   two or three tasks. Long workers are slow to review and the most expensive thing in a session.
+  Split by concern: a system, its content (rooms, items), its art and an entity are separate
+  tasks, not one.
 - **A level or anything with progression** gets an autopilot playthrough as a deliverable: a bot
   that finishes it through the player's own input seam (`unity-coding-habits`,
   `references/testing.md`).
@@ -183,10 +265,10 @@ Name tiers, not versions; models change faster than this file.
 | Worker, implementation | The strongest model a worker can run, never above your own tier. |
 | Worker, small or mechanical | Same, or one tier below. |
 | Research and review | One tier below yours for a scoped read; your worker tier for a risky task. |
-| Editor agent | Mid tier (Sonnet class). |
+| Editor agent, if used (Step 5a) | Mid tier (Sonnet class). |
 
-The editor agent runs a weak model on purpose: it executes a runbook, it does not reason about
-the project. That only works if **you** hand it exact commands (Step 5a).
+The optional editor agent runs a weak model on purpose: it executes a runbook, it does not
+reason about the project. That only works if **you** hand it exact commands (Step 5a).
 
 Running below the top tier yourself → match your own tier rather than reaching upward; you review every
 returned task and cannot meaningfully review work from a stronger model.
@@ -195,14 +277,16 @@ returned task and cannot meaningfully review work from a stronger model.
 
 ## Step 4a — You decide; you do not block on the user
 
-Once a worker is running, the session is non-blocking. Answer its questions yourself,
+Once a worker is running, the session is non-blocking. In human-assisted mode, decision moments
+may go to the user (Step 0a); otherwise answer the worker's questions yourself,
 immediately: pick the option that is simple now and still right in six months, mirror what the
 project already does, prefer the smallest change that will not need undoing. Send a decision,
 not a discussion. Log it in `session-materials/decisions.md` — question, choice, one-line why.
 
-Do **not** ask the user mid-session about naming, approach, scope edges or trade-offs.
+Do **not** ask the user mid-session about naming, approach, scope edges or trade-offs, outside
+human-assisted mode.
 
-The exceptions are narrow, and two of them are Unity-specific:
+The exceptions, the always-ask list, are narrow, and two of them are Unity-specific:
 
 - Something destructive, unsafe or irreversible.
 - **An editor upgrade.** If the only way forward opens the project in a newer editor, stop. That
@@ -217,6 +301,23 @@ The exceptions are narrow, and two of them are Unity-specific:
 Even then, prefer to log it in `session-materials/blockers.md`, mark that task **BLOCKED**, keep
 the rest moving, and surface it under **BIG BLOCKERS** in the report.
 
+### Never sit idle on a Unity block
+
+An editor that stops answering, a held project lock or a question only the user can answer is
+not a reason to wait. Idling on one is the worst failure a session has: one unwatched night can
+lose seven hours to a single ping. In order:
+
+1. **Recover.** On the connected path run `editor-recover.sh` once (`unity-scene-habits`). Its
+   exit 6 means the screen is locked: switch to batch mode, which needs no display.
+2. **Keep working.** Run whatever does not need Unity: code, art and generators, docs, reviews,
+   the next brief. A lock held by the user's own editor means they are testing; that is the case
+   for this, not for closing their editor.
+3. **Re-poll on a timer**, never in a tight loop: a scheduled check every 15-30 minutes.
+4. **Ping the user** when the answer is genuinely theirs, as in Step 0a: in the conversation and
+   on the phone, at most three pings 15 minutes apart, then carry on with the rest and report it.
+
+Log each block in `blockers.md` with the time it started, what you tried and when it cleared.
+
 ---
 
 ## Step 4b — Watch the cost
@@ -229,7 +330,18 @@ resends the agent's whole conversation, so long workers and a long-lived manager
 - **A fresh manager session per phase.** Hand over through `RESUME.md` (closing-out, Pausing)
   instead of running one conversation for days.
 - **Keep tasks small** (Step 3).
-- **Filtered tests while iterating**, the full suite once per task.
+- **A test budget in every brief** (`unity-agent-worker`, the test budget): code first and
+  tests after, isolated runs while working, list, isolate, test, fix when the full run breaks,
+  and a hard number, "at most N full runs", with the filter to use. Filtered batch runs are cheap
+  (about 10 s); full suites, and any run in an open editor, are not.
+- **A full suite every 3-4 tasks, and once at the end**, right before the final commit, run by
+  the writer of that task or by you. Filtered runs miss what a full run finds. A task that
+  touches shared core code (the player controller, the save system, anything many features
+  depend on) earns its own full run, so a late red suite can still be traced.
+- **A known-flake list in `brief-common.md`**: tests that fail in a full run and pass alone, by
+  name. Workers then do not burn runs on them; fix them as a task of their own.
+- **Check usage at kickoff and every few tasks**, if a tool shows it, and say if the plan will not
+  fit.
 - **Grep generated YAML and logs, never read them whole.**
 - **Wait for notifications, do not poll.** Any loop that must poll has a hard stop.
 
@@ -237,20 +349,30 @@ resends the agent's whole conversation, so long workers and a long-lived manager
 
 ## Step 5 — Spawn the worker
 
+**Size the process to the task first.** A handful of mechanical edits (swap a model, delete or
+move an object, flip a field) does not need a worker. Do them inline yourself on the quick path
+of `unity-agent-worker`, or hand them all to one worker with a very short brief. Workers are for
+real features: a new mechanic, a new system, risky code.
+
 Read `references/worker-brief.md` and build every prompt from it. The short version:
 
-- Agent tool, `subagent_type: "general-purpose"`, model from Step 4. **No `isolation`** — the
-  worker works in the user's checkout, on the branch you already cut.
+- Agent tool, `subagent_type: "general-purpose"`, model from Step 4. **No `isolation`** outside
+  speed mode (Step 5b): the worker works in the user's checkout, on the branch you already cut.
 - Every worker follows the `unity-agent-worker` skill, which follows `unity-scene-habits` for
   anything touching the engine.
 - The prompt carries: the task in full, every locked decision verbatim, anchor files to mirror,
   the branch it is on, the baseline (below), the git rules verbatim, "never spawn subagents",
   "never switch branches", and what to report back.
-- **One writer at a time.** Wait for the current worker to finish and pass review before
-  spawning the next.
+- **One writer at a time**, outside speed mode (Step 5b). Wait for the current worker to finish
+  and pass review before spawning the next.
 - **Draft the next brief while a writer runs.** Spawn it once the current task is accepted,
   after adding the latest "Notes from task N" and "Also fix" items. The gap between tasks is then
   a minute, not a brief-writing session.
+
+**Talking to running workers.** A follow-up on files a running worker owns goes to that worker
+with `SendMessage`, not to a new agent; it keeps its context. A worker that ends its turn to wait
+sends an interim report, which is expected, not a failure. If a message got no reply, check
+`ListAgents` to see whether it resumed the recipient, and send it again.
 
 ### The baseline, before any worker starts
 
@@ -264,20 +386,54 @@ A worker without these will chase breakage it did not cause:
 4. **Existing broken references** — the base branch's unresolved-GUID list, so a worker is judged
    only on the ones it added.
 
-Get them from the editor agent's first job (Step 5a) and put them verbatim into every brief and
-into `session-materials/`.
+Take them yourself before the first worker starts, or make them the first worker's first job,
+and put them verbatim into every brief and into `session-materials/`.
 
 **Work out how high the ladder goes before the first worker starts**, and say so in every brief:
-whether the project can run tests, whether it can be smoke-tested in play mode, and whether a
-build is affordable per task. A worker should never have to discover this.
+whether the project can run tests, whether it can be smoke-tested in play mode, whether a
+build is affordable per task, and whether the compile check outside the editor works here. A
+worker should never have to discover this.
 
-## Step 5a — The editor agent (singleton, queued)
+## Step 5a - Unity, one agent at a time
 
-A Unity project can be held by one editor at a time, and an import is expensive. So editor-backed
-work does not live inside workers — it goes to **one shared editor agent**, spawned lazily, on a
-weak model, and addressed by id for the rest of the session. Read
-`references/editor-agent.md` the first time a worker reports `EDITOR REQUEST — no editor agent
-present`.
+A Unity project can be held by one editor at a time, batch included, and an import is expensive.
+By default the **writer runs Unity itself, in batch mode**, in one pass per task: it works in
+files first and runs builders, tests and the final compile together at the end
+(`unity-agent-worker`, `references/files-first.md`), with tests through
+`references/batch-tests.sh` in `unity-scene-habits`. Copy the scripts into `session-materials/`
+at kickoff (`batch-tests.sh`, and for the connected path `run-tests.sh` and `editor-recover.sh`)
+and check their marked lines once, so no worker re-derives them. The one-writer rule already
+makes agents take turns.
+
+- **The project's rule wins.** A project `CLAUDE.md` that says how agents drive Unity overrides
+  this step.
+- **The connected path is on demand**: for a job that needs a live editor, or when the user chose
+  it at kickoff. The writer opens the editor, does the job and closes it, behind
+  `editor-recover.sh`.
+- **A shared editor agent** is a fallback for the connected path driven from a weak manager, or
+  when the user asks for one. `references/editor-agent.md` has its runbook. Under batch mode there
+  is none.
+
+## Step 5b - Speed mode (opt-in, unproven)
+
+Only when the user asks for speed **and** the tasks provably do not overlap: different folders or
+assembly definitions, no shared scene or prefab, no shared core code. It has not been measured on
+a real session yet; time the first one before relying on it.
+
+- **Up to three files-lane writers in parallel**, each in its own git worktree on its own task
+  branch (required). You cut both yourself, so the branch keeps its task name:
+  `git worktree add -b <task-branch> ../<repo>-<task> <session-branch>`, then spawn the worker
+  with no `isolation` and name the worktree path and branch in its brief. Remove the worktree with
+  `git worktree remove` once its branch is merged. That is safe only because they never open the
+  editor there, so no worktree pays a `Library/` import. Their compile check
+  outside the editor can reuse the main checkout's warm `Library/` (`unity-agent-worker`,
+  `references/files-first.md`).
+- **Integrate in waves.** Merge each finished branch into the session branch in the main checkout,
+  run one Unity pass (builders, filtered tests), then start the next wave. Never one big merge
+  at the end.
+- **Editor-lane tasks stay sequential** in the main checkout: anything visual, the NavMesh, feel.
+- **Several agents on an open editor** (connected path) take turns through the test script's
+  FIFO ticket queue (`--queue session-materials/editor-queue`), never through an editor agent.
 
 ---
 
@@ -291,11 +447,15 @@ present`.
      breaks references for everyone on merge.
    - A scene diff far larger than the task means the editor re-serialized the file. Do not
      accept it without an explanation.
+   - Files outside the task, such as prefabs or materials re-saved with default values,
+     `ProjectSettings` flipped by a test run, or a leftover `Assets/InitTestScene*.unity`, are
+     churn. Send them back to be reverted, or revert them yourself as housekeeping.
 3. **Check the rung it claims.** The worker reports how far up the verification ladder it got.
    A task on a project with no tests that reports "verified" is wrong about itself — send it
    back. What you want is an honest level plus a manual checklist for what is left over.
 4. Judge: does it do the task, honour the locked decisions, follow the project's conventions,
-   pass its own verification?
+   pass its own verification? Open its screenshots, and send the key ones to the user as the
+   task lands: it keeps them engaged, and early "too clean" or "wrong scale" feedback is cheap.
 5. **If quality is good, take it to sign-off (6a).** Do not manufacture change requests — but do
    not accept it as done before a person has confirmed the behaviour.
 6. If something is genuinely wrong, send a numbered, precise fix list to the SAME worker via
@@ -309,43 +469,75 @@ A check-in or a "which way next" is not a fix round; answer it (Step 4a).
 After the first accepted task, create the game's structure map (`references/structure-map.md`).
 From then on every brief asks for it to be kept current, and a stale map is a review finding.
 
-### 6a — Human sign-off, before a task is done
+### 6a — Ask to test, before a task is done
 
 Most game projects have no automated tests, so for most tasks **nothing automated proves the
 feature behaves.** A person has to look, and the task is not accepted until they have.
 
-When a task is otherwise green and you are satisfied with the diff:
+When they look depends on the autonomy mode (Step 0a) and on the task:
+
+| Mode | Small task | New mechanic or risky code |
+|---|---|---|
+| Human assisted | One combined sign-off at the end of the batch or session | Per task, blocking, as below |
+| Semi automatic | Same | Per task, without blocking: carry on with tasks that do not build on it |
+| Full automatic (6b) | Every checklist in one sign-off at the end of the session, before the user pushes or merges | Same |
+
+A small task is one on the quick path (Step 5). Deferring its sign-off means a later task can
+build on a broken earlier one. Tests as the gate and conflict-map ordering keep that risk small,
+and a task that other tasks build on is not small.
+
+A combined sign-off is an **ask to test**:
+
+1. **Ping the user** (Step 0a, Pinging the user): the tasks are done, do they want to test now?
+2. **On yes, open the editor on the session branch** (`unity open`), after checking the tree is
+   clean and nothing else holds the project.
+3. **Send the checklist**: every waiting one, grouped by task, short, with each task's rung. What
+   to try, where, and what counts as failure.
+4. **Wait, off Unity.** The user's editor holds the project, so no batch work runs. Keep doing
+   non-Unity work.
+5. **When they are done**, close the editor if they asked for that, or leave it open.
+
+A failed item goes back to whoever did that task as an ordinary fix round, then a quick recheck
+of that item only.
+
+For a per-task sign-off, when the task is otherwise green and you are satisfied with the diff:
 
 1. Post the worker's manual checklist to the user — the scene, the exact steps, what counts as
-   failure — together with the rung the task actually reached and what remains unproven.
-2. **Wait.** This is a sanctioned blocking ask, the same class as the base branch. Do not write
-   the draft PR, do not mark the task done, do not start the next task's sign-off ahead of it.
+   failure — together with the rung the task actually reached and what remains unproven. Offer
+   to open the editor on the branch for them, as in the ask to test above.
+2. **Wait**, in human-assisted mode. This is a sanctioned blocking ask, the same class as the base
+   branch. Do not write the draft PR, do not mark the task done, do not start the next task's
+   sign-off ahead of it. In semi automatic, go on with tasks that do not build on this one, and
+   ping as in Step 0a.
 3. A reported failure goes back to the same worker as an ordinary fix round, and the task returns
    here afterwards.
 
 Keep the checklist short enough to run in a couple of minutes. If a task needs twenty steps to
 demonstrate, it was too big and that belongs in the workflow-improvements section of the report.
 
-While you wait, you may keep read-only work moving — a review agent, a scan. Do not start the
-next writer: the branch is shared, and a failed sign-off means the current task is not finished.
+While you wait, you may keep read-only work moving — a review agent, a scan. Do not start a writer
+on anything that builds on the waiting task: the branch is shared, and a failed sign-off means
+that task is not finished.
 
 If the user checked the task in the editor, run `git status` once they are done. Changes the
 editor made on its own (`unity-scene-habits`, `references/builders.md` lists them) go in one
 housekeeping commit before the next writer starts. Anything else goes to the user.
 
-### 6b — Unattended mode
+### 6b — Deferred sign-off (full automatic)
 
-Only when the user explicitly waives sign-off, for every task or for named ones. Log the waiver
-verbatim, with the date, in `decisions.md`, and patch `brief-common.md`. Then, for the waived
-tasks:
+In full automatic mode, or when the user waives per-task sign-off for named tasks. Sign-off is
+then deferred, not dropped. Log the waiver verbatim, with the date, in
+`decisions.md`, and patch `brief-common.md`. Then, for the waived tasks:
 
 - **Tests are the acceptance gate.** Every deliverable has a test that fails if the behaviour
   breaks, driven through test seams and deterministic.
-- **Anything visual has a screenshot test,** and you open every PNG yourself
+- **Real visual work has a screenshot test** (new UI, lighting, a look someone will judge), and
+  you open every PNG yourself
   (`unity-scene-habits`, `references/visual-checks.md`).
 - **A separate reviewer on every task that changes behaviour,** since no person looks.
-- **Draft PRs and the report say plainly that nobody signed off,** and keep the manual checklist
-  for later.
+- **Every checklist still reaches a person.** Collect them into one sign-off at the end of the
+  session, the final gate before the user pushes or merges (6a). Until it runs, draft PRs and the
+  report say plainly that nobody has signed off yet.
 - **Feel stays unproven.** Movement, weapon feel and difficulty cannot be tested into being good;
   the report lists them as needing a person.
 
@@ -362,8 +554,11 @@ A **SHOULD-FIX** on a task that already passed does not reopen it. It goes into 
 that touches those files, under "Also fix (from task N review)", and that worker adds tests for
 it.
 
-**When the user asked for speed** (a game jam, a deadline), skip per-task reviewers. Run one now
-and then as a last look over everything since the previous one, and once before the report.
+**When the user asked for speed** (a game jam, a deadline), skip per-task reviewers and run one
+parallel read-only review over everything at the end, before the report. Batch editor work into
+one combined compile and test run per iteration rather than one per task, and fold small
+follow-ups into the last task instead of opening new ones. Parallel writers are speed mode
+(Step 5b), and only when the tasks provably do not overlap.
 
 ---
 
@@ -384,18 +579,29 @@ deliverable; the user opens the PRs.
 
 ## Rules
 
-- You manage; agents implement. Never write game code as the manager — branch setup, session
-  files and mechanical housekeeping are yours.
-- **No worktree per worker. One checkout, one branch, one writer at a time.** Read-only agents
-  may run in parallel, up to three.
+- You manage; agents implement. Never write game code as the manager beyond the handful of
+  mechanical edits Step 5 allows. Branch setup, session files and mechanical housekeeping are
+  yours.
+- **No worktree per worker. One checkout, one branch, one writer at a time, one agent on the
+  editor at a time.** Speed mode (Step 5b) is the one opt-in exception, for files-lane writers in
+  worktrees of their own. Read-only agents may run in parallel, up to three.
 - **Nobody switches branches, stashes, resets, force-checks-out or deletes a branch.** There is
-  no isolated copy.
-- Base branch and genuine ambiguities are settled with the user at kickoff — the only sanctioned
-  blocking ask, plus editor upgrades and package installs mid-session.
+  no isolated copy. Only you cut a branch: one session branch, or stacked ones at HEAD between
+  tasks (Step 0).
+- **The user pushes and merges into main.** Agents never do, whichever branch mode.
+- Base branch, autonomy mode and genuine ambiguities are settled with the user at kickoff. After
+  that the autonomy mode decides what is asked (Step 0a); the always-ask list holds in every mode.
+- **The user switches the autonomy mode at any time.** Switch at once and say in one line what
+  changes.
+- **Every ask pings the user** in the conversation and on the phone, at most three times, 15
+  minutes apart, then the work moves on without it.
 - **Subagents never spawn subagents.** Say it in every prompt.
 - **Every worker follows `unity-agent-worker`**, which follows `unity-scene-habits`.
-- **Exactly one editor agent**, weak model, spawned on demand, addressed by id, given a
-  copy-paste runbook. Workers never drive the editor themselves.
+- **Batch mode by default.** The writer runs Unity itself, files first and one batch pass per
+  task, unless the project's `CLAUDE.md` says otherwise. A live editor is on demand, opened and
+  closed per job; a shared editor agent is a connected-path fallback (Step 5a).
+- **Never sit idle on a block.** Recover, keep doing non-Unity work, re-poll on a timer, re-ping
+  the user a bounded number of times (Step 4a).
 - Order tasks by the conflict map. Scene-touching tasks are adjacent and ordered; prefabizing
   goes first.
 - **Establish how high the verification ladder goes before any worker starts** — tests or no
@@ -403,9 +609,11 @@ deliverable; the user opens the PRs.
 - **Baselines before any worker starts**: failing tests if any, existing import errors, existing
   broken references.
 - **A task is not done until a person has signed off its behaviour.** On a project without tests
-  that is the only thing proving the feature works. It blocks; it is not a formality.
+  that is the only thing proving the feature works. It blocks; it is not a formality. Small
+  tasks, and every task in full automatic mode, are signed off together at the end (Step 6a).
 - **Never report "verified" for a project with no tests.** State the rung and what is unproven.
 - Workers commit rarely, subject-only messages, never on a red gate.
 - **Never push, never open a remote PR — manager included.**
 - Good enough is done: two fix rounds, a third only if clearly converging.
 - Don't spawn an agent for work cheaper done inline; don't do work inline that a worker should own.
+  A handful of mechanical edits is cheaper inline; a feature belongs to a worker.

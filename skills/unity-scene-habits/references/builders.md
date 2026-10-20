@@ -2,6 +2,8 @@
 
 A builder is editor code that generates assets the project commits: prefabs, a test scene,
 textures, baked data. Read this before writing one, or before rerunning one somebody else wrote.
+Models made outside Unity by a script, such as headless Blender, follow
+[generated-assets.md](generated-assets.md).
 
 ## Where they live
 
@@ -24,13 +26,21 @@ rerun after someone else's change.
 - **Re-bake into the existing data asset** (navmesh, lighting, anything with a `.asset` output)
   rather than deleting it and making a new one. Same GUID problem.
 - **Create only what is missing.** Look up an object by name or component before adding it.
+- **Skip writing what has not changed.** Compare the new content with what is on disk (the bytes
+  of a texture, the `EditorJsonUtility.ToJson` of an asset) and leave the asset alone when they
+  match. Saving it anyway re-serializes it, which can churn an animator controller's fileIDs or
+  reassign an icon, and the rerun is no longer neutral.
+- **Take a scope.** A builder that builds many areas accepts which one to build, as a
+  `[CliArg]` or a command-line flag, and builds everything only when given none. Parallel
+  workers and merges then each rebuild only their own area.
 - **Verify only what the builder owns.** A check like "the scene has exactly one camera" breaks
   the day another builder adds a second. Check your own objects.
 - **Enforce order in code.** If one builder needs another's output, it checks for it and fails
   with a clear message, or calls that builder itself. A note in a comment is not enforcement.
 - **Stop regenerating what a person has edited.** Once someone hand-tunes generated geometry or
-  layout in the editor, the builder must leave it alone. The simplest rule: it only creates an
-  area when the area is missing.
+  layout in the editor, the builder must leave it alone, and changes to it are surgical edits of
+  the group the builder owns. Untouched output it updates in place, so tuning never means
+  deleting an asset to get it rebuilt.
 
 To check that a rerun is neutral, run it and look at `git status`. If fileIDs churn anyway, a
 coarse check that ignores them compares the YAML with IDs normalised. Unity orders objects by

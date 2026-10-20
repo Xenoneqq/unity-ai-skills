@@ -9,18 +9,23 @@ Keep `session-materials/tracking.md` from the first spawn; you cannot reconstruc
 
 | task | agent id | model | scenes/prefabs touched | started | finished | tokens | status |
 
-Give the editor agent its own row, plus a line per run (what ran, verdict, duration). Fill tokens
-and timing from each completion notification; write `n/a` when a number was not reported, never
-invent one.
+Log a line per editor run (who ran it, what, verdict, duration); an editor agent, if used, gets
+its own row. Fill tokens and timing from each completion notification; write `n/a` when a number
+was not reported, never invent one.
 
 ---
 
 ## Step 8 — Draft PRs, as files
 
 When a task is accepted, write `session-materials/pr-<task-slug>.md`: base branch, head branch,
-title, body, and the verification that actually ran — the rung reached, what is still unproven,
-and that a person signed the behaviour off. Never write "tested" or "verified" for a project with
+title, body, and the verification that actually ran: the rung reached, what is still unproven,
+and whether a person signed the behaviour off or it waits in the combined sign-off at the end of
+the session (Step 6a). Never write "tested" or "verified" for a project with
 no tests; say what was checked and what was not.
+
+One draft per task on a single session branch, covering its commit range; with stacked
+branches, one per branch, its base the previous task's branch, and the report says the user
+merges them in order.
 
 Follow the project's own PR template and contributing rules where it has them; a plain
 Summary-and-Changes body where it does not.
@@ -40,9 +45,9 @@ deliverable; the user opens the PRs.
 2. **Token & time accounting** — per agent, then session totals. Say plainly which were
    unavailable.
 3. **Implementations** — per task: what it covers, **the verification rung it reached and what
-   remains unproven**, who signed it off (or that nobody did, under unattended mode), and for any
-   **PARTIAL**: what landed, what did not, the blocker, the suggested next step. Under unattended
-   mode, list anything about feel (movement, weapon feel, difficulty) as unproven and needing a
+   remains unproven**, who signed it off or that it waits in the combined sign-off, and for any
+   **PARTIAL**: what landed, what did not, the blocker, the suggested next step. Under full
+   automatic, list anything about feel (movement, weapon feel, difficulty) as unproven and needing a
    person, whatever the tests say.
    State once, up front, whether this project has automated tests at all. A reader who assumes it
    does will misread every line under this heading.
@@ -52,6 +57,8 @@ deliverable; the user opens the PRs.
    missing anchor files, conflicts you did not predict. Include the workers' "Tooling / skill
    friction" lists, triaged: what was missing, wrong or awkward in the skills themselves.
 6. **Draft PRs** — path to each file.
+7. **Combined sign-off**: every checklist still waiting, together and grouped by task, as the
+   final gate before the user pushes or merges. Omit it if nothing waits.
 
 ## What the report is for
 
@@ -72,15 +79,17 @@ leave everything a new session needs on disk.
 
 1. **Stop the writer.** Then check `git status` and report what it left uncommitted. Never stash
    it or clean it up; the user decides.
-2. **Write `session-materials/RESUME.md`**: HEAD, the tasks accepted so far, the task in progress
-   and which brief to respawn its worker from, the editor path in use (connected or batch, editor
-   open or closed), and a note that the editor agent must be respawned.
-3. **On resume**, respawn the editor agent from `editor-agent-prompt.md`, put its new id in
-   `brief-common.md`, and make its first job an import check. Ask the editor question from Step 0
-   again, since the user's setup may have changed, and patch `brief-common.md` to match.
+2. **Write `session-materials/RESUME.md`**: HEAD, the branch mode and current branch, the tasks
+   accepted so far, the task in progress and which brief to respawn its worker from, the editor
+   path in use (connected or batch, editor open or closed), and, if an editor agent was used, a note that it must be respawned.
+3. **On resume**, remove stale tickets from `session-materials/editor-queue/` if speed mode was
+   on, now that no agent is running, and run an import check. If an editor agent was used,
+   respawn it from `editor-agent-prompt.md` and put its new id in `brief-common.md`. Ask the
+   editor question from Step 0 again, since the user's setup may have changed, and patch
+   `brief-common.md` to match.
 
 ### After a crash or power loss
 
 Check before building on anything: `git fsck`, then an import, the EditMode suite and the
-PlayMode suite through the editor agent, then look for Unity processes or wait loops left over
+PlayMode suite through the test script, then look for Unity processes or wait loops left over
 from before the crash. Only then respawn the writer.

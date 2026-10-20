@@ -1,18 +1,23 @@
 # The editor agent
 
-Read this the first time a worker reports `EDITOR REQUEST — no editor agent present`, or earlier
-if you already know the tasks need builds, tests or import checks.
+**Connected path only, and optional.** By default the writer runs Unity itself in batch mode
+(Step 5a), and under batch mode there is no shared editor agent. Use one only on the connected
+path when the writer driving the editor does not fit: a weak manager, or the user asks for one.
+If the project's `CLAUDE.md` says who drives the editor, that wins.
 
-A Unity project can be held by **one editor at a time**, and a cold import costs minutes. So
-editor-backed work does not live inside workers — it goes to one shared agent that owns the
-editor for the session.
+A Unity project can be held by **one editor at a time**, and a cold import costs minutes. An
+editor agent owns the editor for a phase, and workers send it their runs.
 
-## Spawn it lazily, address it by id
+## Spawn it once, address it by id
 
-Spawn on the first request, never a second time while it still answers. It is a resumable agent,
-not a running one: it finishes after every job and wakes when someone sends it a message. Later
-requests route to it via `SendMessage`, which resumes it with its queue and notes intact. Give
-its name to every worker that needs it, and to later workers in their initial prompt.
+Spawn it before the first worker that needs it, never a second time while it still answers. It is
+a resumable agent, not a running one: it finishes after every job and wakes when someone sends it
+a message. Later requests route to it via `SendMessage`, which resumes it with its queue and
+notes intact. Put its name in `brief-common.md`.
+
+- **Respawn it per phase.** Its context grows with every job, and a long-lived one slows down,
+  stalls and misses messages. A fresh one per phase, from the stored prompt, stays fast.
+- **A message that did not resume it** gets no reply. Check `ListAgents` and send it again.
 
 Keep two things in `session-materials/` so replacing it is one edit:
 
@@ -53,20 +58,10 @@ and bake the result into its prompt as a copy-paste runbook:
 If you do not know the recipe, spend one cheap read-only pass to find it. Do not let the editor
 agent go looking.
 
-## Its first job is the two baselines
+## Its first job
 
-Before any worker's request:
-
-1. **Whether the project has any tests at all.** Most game projects do not. This decides how high
-   the verification ladder goes, and the manager needs it before the first brief.
-2. **Failing tests** on the base branch, untouched, by name, if there are any.
-3. **Clean-import state** — console errors, warnings, missing references, broken shaders already
-   present before anyone touched anything.
-4. **Existing broken references** — the base branch's unresolved-GUID list, so a worker is judged
-   only on what it added.
-
-Both go verbatim into every worker brief and into `session-materials/`. Without them a worker
-either chases breakage it did not cause or excuses breakage it did.
+If the baselines from Step 5 are not taken yet, it takes them before any worker's request. On
+the connected path its test runs go through the test script, `session-materials/run-tests.sh`.
 
 ## What the prompt must say
 
@@ -85,13 +80,16 @@ either chases breakage it did not cause or excuses breakage it did.
 - **On the connected path, run only connected-safe methods.** A method that may call
   `EditorApplication.Exit` without an `Application.isBatchMode` guard closes the user's editor
   and their unsaved work. If you cannot tell, report back instead of running it.
-- **Timeouts plus an idle editor mean a dialog.** If requests time out on the editor's main
-  thread while its CPU sits idle and its log is quiet, a modal dialog is waiting for a click.
-  Stop retrying and tell the manager the user needs to look at the editor.
+- **Timeouts plus an idle editor mean a stalled editor.** If requests time out on the editor's
+  main thread while its CPU sits idle and its log is quiet, the screen may be locked or a modal
+  dialog may be waiting. Stop retrying and run `editor-recover.sh` once (`unity-scene-habits`). It
+  acts only on an editor an agent opened; on exit 5 or 7, tell the manager the user needs to look
+  at the editor.
 - **Never open the project in a different editor version than the project's own.** That upgrade
   is irreversible. If the version is missing, report it rather than substituting.
-- **Never close or kill an editor you did not start**, and never `unity close` — it exits without
-  saving and may be the user's own session.
+- **Never close or kill an editor you did not start.** `unity close` exits without saving, so run
+  it only on an editor an agent opened and marked (`unity-scene-habits`,
+  `references/connected-editor.md`, "On demand, then close"), never on the user's own session.
 - On finish, reply to the sender of the request (a worker cannot know its own id, so never wait
   to be given one) with PASS/FAIL, failing test or error names, the relevant log
   excerpt, and the path to the full log under

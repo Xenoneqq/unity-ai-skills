@@ -47,19 +47,46 @@ pointing at a skill nobody has installed sends the reader nowhere.
 
 ## Driving the editor
 
-<Which path this project is on, so nobody has to rediscover it:>
+<How agents drive Unity here, so nobody has to rediscover it:>
 
-- **Unity CLI** — `unity` on `PATH`, or not installed. It resolves editors, licences and builds.
-- **Editor 6.0+ with the Pipeline package** → C# runs against a *running* editor via
-  `unity command eval`, with no recompile. Otherwise it is `-batchmode -executeMethod`, which
-  needs the editor closed. `unity-scene-habits` has both paths; say here which one applies.
-- **The user's editor while agents work** — on the connected path it is look-only while a task
-  runs: no saving scenes or prefabs, no Play mode. Never change a scene or prefab on disk that
-  the editor has open.
+- **Default: batch mode, editor closed.** No Unity window opens or takes focus. Builders:
+  `unity run "<ROOT>" --timeout 900 --no-tail -l <log> -- -executeMethod Type.Method` (the CLI
+  adds `-batchmode` and `-quit`). Tests: `unity test "<ROOT>" --mode EditMode|PlayMode --filter
+  <name> --output <file>.xml`, or `batch-tests.sh`. A compile error shows as `error CS` in the
+  log. <Without the Unity CLI: the raw editor binary with `-batchmode -executeMethod`.>
+- **Connected, only when needed** <6.0+ with the Pipeline package>: `unity open`, the job through
+  `unity command`, `unity close`. Never while the user is in the editor. A stalled editor:
+  `editor-recover.sh` (`unity-scene-habits`).
+- **The user tests in the editor.** When work is done, agents ask whether the user wants to test,
+  open the project on the right branch, and send a short checklist. While the user has the editor
+  open, agents do no Unity work; batch cannot run against the project lock.
+- **Batch runs are muted** by `<path to BatchModeMute.cs>`, or <not installed>.
 - **Tests** — whether this project has any at all. It decides how far verification can go and
-  what a report is allowed to claim.
+  what a report is allowed to claim. Say whether a PlayMode test assembly exists or was declined.
+- **Who drives Unity**: the agent doing the task, one agent at a time, unless this project wants
+  a dedicated editor agent. This line overrides the skills' default.
+- **Saving the open scene**: whether agents may save it through the editor. A test run's reload
+  marks the scene dirty, and a dirty scene makes the run open a modal save dialog; without
+  permission, agents stop and ask.
 - **Packages settled at setup** — Pipeline and ProBuilder: installed, already there, or declined.
   A declined package is not offered again.
+
+## How agents work here
+
+Pointers only; the skills carry the procedure.
+
+- **Files first.** C# and builder scripts are written as files, and Unity is used in one batch
+  pass per task (`unity-agent-worker`). Compile check outside the editor: <the exact command
+  once it is established, or "none, use a batch compile">.
+- **Tests.** Isolated tests while working, one full run at the end, and list, isolate, test, fix
+  when it breaks (`unity-agent-worker`).
+- **One writer at a time.** Parallel writers in worktrees are speed mode, only on request
+  (`unity-manage-work`).
+- **Autonomy mode.** <full automatic, semi automatic or human assisted, if the user has a
+  preference; leave it out and the manager asks at kickoff>. The user can switch it any time.
+  Whatever the mode, an ask reaches the user in the conversation and on the phone.
+- **Branches.** <one session branch per body of work, or stacked branches, one per task; leave
+  it out and the manager asks at kickoff>. Agents never push or merge.
 
 ## Hard rules
 
@@ -74,7 +101,7 @@ pointing at a skill nobody has installed sends the reader nowhere.
 - **Never push, never open a PR** without being asked.
 
 <Anything else true of this project: naming, assembly definitions, the render pipeline,
-multiplayer constraints, which scenes are contested, the art style's import rules (filtering,
+multiplayer constraints (the networking framework, and who owns player movement), which scenes are contested, the art style's import rules (filtering,
 pixels per unit).>
 ````
 
@@ -90,6 +117,8 @@ This project's instructions for coding agents live in [CLAUDE.md](CLAUDE.md). Re
 
 The short version: prefab-first, never hand-edit `.unity` / `.prefab` / `.meta`, commit every
 asset together with its `.meta`, and check [STRUCTURE.md](STRUCTURE.md) before creating anything.
+Work in files first, one writer at a time, and use Unity once per task, in batch mode with the
+editor closed.
 ````
 
 ## Rules for writing them

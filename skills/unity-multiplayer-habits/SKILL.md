@@ -1,11 +1,11 @@
 ---
 name: unity-multiplayer-habits
 description: >
-  Build multiplayer correctly in a Unity project using Mirror: let the server own game state and
-  the client own its own movement, pick the right direction for every remote call, re-validate
+  Build multiplayer correctly in a Unity project using Mirror: let the server own game state, ask
+  the user who owns player movement, pick the right direction for every remote call, re-validate
   anything a client sends, register spawnable prefabs so they actually appear, branch on the
   right identity flag, and never call it done without two clients agreeing. Settles which
-  networking framework a project uses before any networked code exists. Use when: adding or
+  networking framework a project uses, and where movement runs, before any networked code exists. Use when: adding or
   changing networked behaviour, "sync this across clients", "why does this only work for the
   host", "it works in the editor but the other player sees nothing", "my prefab doesn't spawn
   for clients", `[Command]`, `[ClientRpc]`, `[SyncVar]`, `NetworkBehaviour`, Mirror, "test with
@@ -20,13 +20,11 @@ Two rules about who decides what. Everything below is how to keep them.
 The server decides and tells clients. A client *asks*; it does not announce. This is the part a
 cheater profits from forging, so this is the part the server keeps.
 
-**The client owns its own body.** Player movement is the standard exception, and
-client-authoritative is the default to reach for: server-authoritative movement only feels good
-once you have client-side prediction *and* server reconciliation, and without them every input
-waits a full round trip. Mirror agrees — `NetworkTransformBase.Reset()` sets
-`syncDirection = SyncDirection.ClientToServer`, so a freshly added NetworkTransform is
-client-authoritative out of the box. It is the developer's call, not this skill's: if the project
-already chose otherwise, that choice wins.
+**Player movement is the one real choice, and it is the user's.** Casual and co-op games usually
+let each client own its own body: simple and responsive, at the price of being easy to cheat. The
+more competitive the game, the more movement belongs on the server, which only feels good with
+client-side prediction *and* server reconciliation; without them every input waits a full round
+trip. Section 0 asks once. If the project already chose, that choice wins.
 
 Correctness first, because these bugs are the expensive kind. They reproduce only with two
 clients and they fail *silently* — no exception, no warning, just two screens that disagree.
@@ -65,12 +63,35 @@ Frame the question so the user can actually decide, and do not pick for them:
 Neither is the right answer in general. What matters is that one gets chosen deliberately, before
 any networked code exists, rather than arrived at by accident.
 
-**The rest of this skill is written for Mirror.** The principles below — server owns state, the
-client owns its own body, validate on the server, register what you spawn, test with two clients —
-hold for either. The API does not: NGO's equivalents are `NetworkBehaviour` with `[Rpc]`,
+**The rest of this skill is written for Mirror.** The principles below — server owns state,
+movement where the user chose, validate on the server, register what you spawn, test with two
+clients — hold for either. The API does not: NGO's equivalents are `NetworkBehaviour` with `[Rpc]`,
 `NetworkVariable`, and `NetworkObject`, and the details differ enough that you must check its docs
 rather than translating Mirror calls by name. If the project picks NGO, say plainly which parts of
 this skill you are applying as principle rather than as API.
+
+### Then: who owns player movement
+
+Also the user's call, asked once, in the same question as the framework when both are open. First
+check whether the project already decided: a player prefab's NetworkTransform `syncDirection`
+(Mirror's `SyncDirection` enum: server to client, or client to server), or input sent to the
+server by `[Command]` while the server moves the player. A documented choice in the project's
+`CLAUDE.md` settles it too.
+
+Otherwise ask, with the trade-off in one line each and a recommendation from the kind of game:
+
+| Option | Fits | Costs |
+|---|---|---|
+| **Client-authoritative** | Casual and co-op games, friends playing together | Easy to cheat: a modified client can move anywhere |
+| **Client-authoritative with server checks** | Most games in between | The server rejects impossible speed, teleports and position jumps; a little extra work |
+| **Server-authoritative** | Competitive games, anything with a ranking or stakes | Prediction and reconciliation, so far more work and more ways to feel wrong |
+
+Record the answer in the project's `CLAUDE.md`, so no later task asks again. It decides the
+setup: client-authoritative uses a NetworkTransform syncing client to server (what a freshly added
+one does in Mirror); server checks add validation on the server side of that sync; server-
+authoritative sends input by `[Command]`, moves the player on the server and needs prediction on
+the owning client. Check what the project's Mirror version ships for prediction before building
+your own.
 
 ## 1. Read the project before writing anything
 
@@ -133,7 +154,8 @@ A `[Command]` body is the trust boundary. Treat its parameters as a request, not
 Anti-cheat beyond this is a later layer, proposed rather than imposed. When a project reaches the
 point of caring, the order is: server-side sanity checks first (speed caps, position-delta and
 teleport limits, rejecting impossible moves), then lag compensation, then full prediction and
-reconciliation. None of that is a reason to make movement server-authoritative on day one.
+reconciliation. The movement choice from section 0 sets the starting point; move along that
+order only when the user asks, not on day one.
 
 ## 4. Spawning: registration is the part that bites
 

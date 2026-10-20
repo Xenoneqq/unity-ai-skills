@@ -52,6 +52,21 @@ climb has to be above the maximum jump height, not level with it.
 Run these again after dressing. Dressing that nudges a crate into a doorway or onto a jump
 landing is the usual way a proven blockout breaks.
 
+## Checks every built piece gets for free
+
+When areas come from a builder, iterate its list in an EditMode test and check each one:
+
+- **Deterministic.** The same seed gives the same mesh and the same placements.
+- **Inside its bounds.** No geometry pokes past the area's declared size.
+- **Openings and spots clear.** No prop in a doorway, a connection opening, or on a pickup,
+  loot or interaction spot.
+- **Floors walkable,** and the navmesh reaches every entry and spawn point.
+- **Within budget.** Triangle count under the project's limit per area.
+- **Hazards armed.** Every hazard has its kill or damage volume.
+- **Reachable and in sight.** Anything the player must pick up or use has a navmesh point
+  within reach of it, and an unobstructed ray from the player's eye height at that point to the
+  object. A pickup on the navmesh but hidden behind a lip is exactly what the other checks miss.
+
 ## Captures
 
 Look at the level from where the player will. Render from each marker with a temporary camera at

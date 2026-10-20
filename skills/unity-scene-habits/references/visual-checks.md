@@ -2,8 +2,9 @@
 
 A test proves a rule holds. It cannot tell you a pose looks awkward, a sprite is unreadable or a
 light is off. A screenshot can, and when no human is checking the work it is the best evidence
-there is. Anything visual ships with a PlayMode test that renders it to a PNG, and someone looks
-at the PNG.
+there is. Real visual work (new UI, lighting, a look someone will judge) ships with a PlayMode
+test that renders it to a PNG, and someone looks at the PNG. Checking that an object is there is
+not visual work: a raycast or bounds assert says that for free.
 
 ## Rendering headless
 
@@ -66,12 +67,20 @@ one folder per task, and it is the one place in `session-materials/` workers may
 a managed session, use the system temp folder (`Path.GetTempPath()`) and log the path. Not the
 project's `Temp/`: Unity deletes it when the editor quits, so a batch run loses the files.
 
+One visual test per look change, each writing to a fixed path, so the same shot can be taken
+again after every tweak and compared.
+
 Mark screenshot tests with `[Category("Screenshot")]`. A full-suite run reruns every earlier
-screenshot test and overwrites its PNGs; filter the category out of routine runs if the older
-shots still need looking at.
+screenshot test and overwrites its PNGs, and a runner may wipe the output folder; filter the
+category out of routine runs if the older shots still need looking at (`-testCategory
+"!Screenshot"`, or `batch-tests.sh --category '!Screenshot'`), and after a full run, reshoot the
+ones you need with a filtered run.
 
 ## Looking
 
-Open every PNG. A screenshot nobody opened proves nothing. Check what a player would notice: is
-the subject framed and readable, does it look like the rest of the game, is anything clipped,
-stretched or floating.
+Open every PNG before reporting. A screenshot nobody opened proves nothing. Check what a player
+would notice: is the subject framed and readable, does it look like the rest of the game, is
+anything clipped, stretched or floating.
+
+Send the key images to the user as work lands, not only at the end. Early looks get the most
+useful feedback, such as texture density or "too clean", while it is still cheap to act on.

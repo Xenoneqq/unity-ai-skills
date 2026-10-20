@@ -33,11 +33,60 @@ The Input System's own `InputTestFixture` fakes devices instead. It needs the pa
 `testables` in `Packages/manifest.json`, which is a manifest change, so it is the user's call.
 The seam needs nothing.
 
+## Logic tests outside the editor
+
+Pure rules with no engine types, such as damage math, inventory or a state machine, can live in
+an assembly definition with `noEngineReferences` set. A plain test project outside `Assets/` that
+compiles the same source files with NUnit then runs them with `dotnet test` in seconds, with no
+editor and no domain reload. A pattern to adopt where the logic already separates cleanly, not a
+requirement. Keep the tests runnable in the editor's Test Runner too, so the full run still
+covers them.
+
 ## Fixed frame time
 
 Set `Time.captureDeltaTime = 1f / 60f` in the fixture's setup and back to `0` in its teardown.
 Every frame then advances exactly one sixtieth of a second however fast the machine runs, so a
 test that waits 60 frames has simulated one second every time.
+
+## Test speed
+
+Fades, black pauses, cutscene clips and timers make a suite slow for no reason a test cares
+about. Two switches take most of it out; on one project they cut the same 24 tests from 254 s to
+70 s.
+
+**One presentation speed switch.** A static that game code reads for fades, black pauses and
+clip playback, default 1. These often run on unscaled time, which `Time.timeScale` does not
+touch. Reset it on every Play mode entry, because Enter Play Mode Options keep statics:
+
+```csharp
+public static class PresentationSpeed
+{
+    public static float Multiplier = 1f;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void Reset() => Multiplier = 1f;
+}
+```
+
+**The test base speeds both up and puts them back:**
+
+```csharp
+[SetUp]    public void SpeedUp() { Time.timeScale = 4f; PresentationSpeed.Multiplier = 10f; }
+[TearDown] public void Restore() { Time.timeScale = 1f; PresentationSpeed.Multiplier = 1f; }
+```
+
+- **Assert durations in game time** (`Time.time`), so they hold at any scale.
+- **Keep one real-time test per timed feature**, such as a cutscene, an animation clip or a
+  transition, run at normal speed, so the speed-up never hides a timing bug.
+- **Never raise the time scale past what the fastest sampled check can take.** A sight or
+  reaction check sampled at intervals can be skipped over, and the test passes when it should
+  fail.
+
+Fixed frame time and time scale answer different questions. `Time.captureDeltaTime` makes a test
+deterministic: every frame is the same length on any machine. Time scale makes it fast: more
+game time per frame. Use fixed frame time for movement, physics and anything that counts frames;
+add time scale to cut the waiting in longer flows. When a test needs both, set and restore both
+in the same SetUp and TearDown.
 
 ## Leave nothing behind
 
@@ -50,6 +99,19 @@ test's line of fire breaks that test. Prefer behaviour tests that build their ow
 runtime, and keep a shared test scene for smoke and screenshot tests. If features must share one,
 give each its own region of it.
 
+## Categories
+
+Give every test a category for its feature or area, on the fixture:
+
+```csharp
+[TestFixture, Category("Doors")]
+public class DoorTests { }
+```
+
+A worker then runs only what it changed with one category filter instead of a list of names,
+and every run it skips saves a recompile and a domain reload. Name categories after the feature
+folders. Reserve extra ones, such as `Screenshot` or `Slow`, for tests routine runs should skip.
+
 ## Long tests
 
 `[UnityTest]` times out after 180 seconds by default. A playthrough or soak test that needs
@@ -57,8 +119,10 @@ longer says so: `[UnityTest, Timeout(600000)]`.
 
 ## Silence
 
-Tests run through the connected editor play their sound out of the user's speakers. Mute the whole
-test assembly with a fixture outside any namespace, which NUnit applies to every test in it:
+Tests play their sound out of the user's speakers, in batch mode as much as in the open editor.
+Batch editors are muted by one editor script (`unity-scene-habits`, `references/batch-mode.md`,
+"Mute batch runs"). For runs in the open editor, mute the whole test assembly with a fixture
+outside any namespace, which NUnit applies to every test in it:
 
 ```csharp
 [SetUpFixture]

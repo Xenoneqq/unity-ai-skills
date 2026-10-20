@@ -3,7 +3,7 @@ name: unity-agent-worker
 description: >
   Carry one Unity task end to end in the user's own checkout: read the project's rules first,
   work in verifiable milestones, do all engine work through `unity-scene-habits` (prefab-first,
-  editor CLI, never hand-edit YAML), send editor-backed runs to the shared editor agent, keep
+  Unity CLI, never hand-edit YAML), work in files first and use Unity in one batch pass, keep
   every new asset paired with its `.meta`, verify before every commit, and never push or switch
   branches. Use when handed a single Unity task to implement — by a user, or as a worker spawned
   by `unity-manage-work`.
@@ -17,6 +17,25 @@ and you do not spawn subagents.
 If a manager spawned you, it locked the branch, the decisions and the baseline. Treat that brief
 as authoritative and report to the manager, never to the user.
 
+## Size the process to the task
+
+A small, clear change does not need the full process below. Take the **quick path** when all of
+these hold:
+
+- It changes content or data, not behaviour: swap a model, delete or move an object, flip a
+  serialized field, retune a number.
+- It touches a handful of existing files and adds no new script.
+- The brief says exactly what to change. Nothing is left to design.
+
+The quick path: read the project's `CLAUDE.md`, make the edit (straight through the Unity CLI;
+a one-off needs no builder), run one existing test that covers the area if there is one, run the
+rung-0 checks from section 5 (every asset paired with its `.meta`, the scene diff intended), and
+commit. If nothing automated covers it, add a one-line manual check to your report. No
+milestones, no screenshots, no new tests, no reading every skill.
+
+A new mechanic, a new system, or risky code such as the player controller or the save system
+takes the full process. If a quick task turns out to need new code, switch to it and say so.
+
 ## 1. Read before you write
 
 In this order, stopping as soon as you have what you need:
@@ -24,13 +43,16 @@ In this order, stopping as soon as you have what you need:
 1. The project's own rules — `CLAUDE.md`, `AGENTS.md`, `CONTRIBUTING.md`, contributor notes.
    **These outrank this skill and every skill it references.**
 2. The anchor files you were given, or the nearest equivalents. Mirror what is already there:
-   folder layout, naming, assembly definitions, how existing prefabs are built.
+   folder layout, naming, assembly definitions, how existing prefabs are built. Where the brief
+   names doc sections to skim, read those sections, not the whole file.
 3. `unity-scene-habits` — the engine mechanics. Everything you do to a prefab, a scene, an asset
    or the editor CLI follows it. Do not re-derive it and do not work around it.
 
 ## 2. You are in a shared checkout
 
-There is no worktree and no isolated copy. The tree you are editing is the user's own.
+There is no worktree and no isolated copy. The tree you are editing is the user's own. The one
+exception is a speed-mode files-lane task (`unity-manage-work`), which runs in a worktree of its
+own: never open the editor there.
 
 - **Stay on the branch you were given.** Never `checkout` another branch, never create one,
   never rename one.
@@ -38,34 +60,57 @@ There is no worktree and no isolated copy. The tree you are editing is the user'
   to recover from.
 - **Stay inside your file set.** If the task needs a file nobody mentioned, that is a finding to
   report, not a licence to spread.
-- **Leave `session-materials/` alone.** It is the manager's.
+- **Leave `session-materials/` alone**, apart from anything your brief lets you write there. It
+  is the manager's.
 - If the working tree contains changes you did not make, stop and report it. Do not build on top
   of someone else's uncommitted work.
 
 ## 3. Work in milestones
 
-Split the task into chunks that can each be *shown* to work. For each one: make the change, run
-the gate, then move on. Do not build the whole thing and verify at the end.
+Split the task into chunks that can each be *shown* to work. For each one: make the change, check
+it where that is cheap (a compile outside the editor, the intended diff), then move on. Do not
+build the whole thing and only check it at the end. Unity-backed checks, `.meta` pairing and
+test runs among them, happen in the Unity pass (section 4), not per milestone.
 
 Prefer the smallest diff that fully solves the task. Do not delete comments or code the task does
 not require you to touch, and do not tidy things nobody asked about.
 
-## 4. Engine work goes through the CLI, editor runs go through the editor agent
+## 4. Files first, then one Unity pass
 
-Prefab and asset edits you drive yourself, per `unity-scene-habits` — prefab-first, edit prefab
-assets rather than scenes, never hand-edit `.unity`, `.prefab` or `.meta`.
+Most of a task needs no Unity at all. Write it as files: C# as files, and scene, prefab and asset
+changes as builder scripts per `unity-scene-habits` (prefab-first, edit prefab assets rather than
+scenes, never hand-edit `.unity`, `.prefab` or `.meta`). Check the compile outside the editor
+where the project has a recorded way to. Then use Unity **once per task**, or once per batch of
+small tasks. In batch mode, the default, with the editor closed:
 
-Anything needing the editor itself — a batch run, a build, a test suite, an import check — is
-**serialized centrally**, because one project can be held by one editor at a time and an import
-is expensive. Never drive it yourself:
+1. one `unity run … -executeMethod` per group of builders,
+2. filtered `unity test` calls for what changed,
+3. one full `unity test` per mode at the end.
 
-1. Check whether an editor agent exists (`ListAgents`, or the name your manager gave you).
-2. If none exists, report `EDITOR REQUEST — no editor agent present` to your manager, with the
-   request below. The manager spawns it and hands you its name.
-3. Send it: the branch, exactly what to run, and what counts as pass.
-4. **One outstanding request at a time.** Wait for the verdict before sending another, and keep
-   working on anything that does not depend on it. To wait, end your turn: the reply resumes
-   you. Never sleep in a loop or poll the editor agent's output.
+That pass creates the `.meta` files for new assets, so commit after it, never before. Visual and
+feel work that someone has to watch is the exception and uses a live editor, on demand.
+[references/files-first.md](references/files-first.md) has the detail.
+
+You drive Unity yourself, and **only one agent uses it at a time**: one project can be held by
+one editor, batch included, and an import is expensive.
+
+- **Run batch tests through the batch test script**, `unity-scene-habits`'
+  `references/batch-tests.sh`, or the copy your brief names. Nothing to focus, no window.
+- **If an editor holds the project** (exit 2, "an editor holds the project"), it is probably the
+  user testing. Never close it. Do your non-Unity work, then report it.
+- **On the connected path**, only when your brief chose it or the job needs a live editor and
+  the brief's autonomy mode lets you open one (otherwise ask your manager and keep working), run
+  tests through `unity-scene-habits`' `references/run-tests.sh`. **Exit 3 means recover once**:
+  run `references/editor-recover.sh` from the same skill, retry once, and report if it is still stuck. Its exit 6 means
+  the screen is locked and the editor was closed: carry on in batch mode. Exit 7 means the editor
+  is the user's: leave it and report. It acts only on an editor an agent opened and marked.
+- **In speed mode your brief may give an editor queue**: pass `--queue <dir>`. The wait is
+  bounded; on exit 4, work on something else, try once more, then report. Never loop on it.
+- **The project's rule wins.** If the project's `CLAUDE.md` says who drives the editor, follow it
+  over this section.
+- If your brief names an editor agent instead (`unity-manage-work`), send it the branch, exactly
+  what to run and what counts as pass, one request at a time. To wait, end your turn: the reply
+  resumes you.
 
 ## 5. Verify — as far as the project allows
 
@@ -77,10 +122,11 @@ a ladder: climb as far as this project allows, then **say which rung you reached
 you have not run.
 
 - **It compiles.** No `error CS` anywhere in the run.
-- **Tests pass** *if the project has any*, apart from the known-failing baseline you were given,
-  by name. A failure outside that list is yours and blocks the commit. Chasing one inside it is
-  wasted work; hiding a real one behind "already broken" is worse. If the project has no tests,
-  say that rather than reporting a green suite.
+- **Tests pass** *if the project has any*: the isolated tests for what changed, and one full
+  run before the last commit (test budget, below), apart from the known-failing baseline you
+  were given, by name. A failure outside that list is yours and blocks the commit. Chasing one
+  inside it is wasted work; hiding a real one behind "already broken" is worse. If the project
+  has no tests, say that rather than reporting a green suite.
 - **No new import errors** beyond the baseline: missing references, broken shaders, console
   errors on a clean import.
 - **No new broken references.** The most common real breakage in Unity and it needs no test
@@ -103,10 +149,49 @@ done
 - **The scene diff is intended.** `git diff --stat -- '*.unity'` should be empty unless the task
   genuinely needed a scene change. If it is not and you did not mean it, revert the whole file —
   not partial hunks — before committing.
+- **No unrelated churn.** Unity runs leave things behind: prefabs and materials re-serialized
+  with default values, `ProjectSettings` flipped by a test run, `Assets/InitTestScene*.unity`.
+  Check `git status` for files outside your task, delete the leftover test scenes, and revert the
+  rest unless the task meant it (`unity-scene-habits`, `references/builders.md` lists what the
+  editor changes on its own).
+
+**Screenshots only when asked, or for real visual work**: new UI, lighting, a look the user will
+judge (`unity-scene-habits`, `references/visual-checks.md`). Never to show that an object is
+there; an existing test's raycast or bounds assert says the same for free.
+
+**New tests only for new behaviour.** Swapping or deleting content updates the existing tests
+that name the old thing. It does not add tests.
+
+### The test budget
+
+A filtered batch run costs about 10 s with a warm `Library/`; a full suite costs far more, and a
+run in an open editor pays a recompile and a domain reload (30-90 s) on top. The budget is on
+full runs; filtered batch runs are cheap enough to use freely while working. Spend runs
+deliberately:
+
+- **Code first, tests after.** Write the whole change, or the whole batch of small tasks, then
+  test it in the Unity pass. Never edit, test, edit, test per task.
+- **While working, test a little, isolated only**: the filtered tests for the case at hand, by
+  category or by name.
+- **At the end, one full run** to confirm nothing else broke, right before your final commit,
+  unless your brief says it runs at the end of the session instead. A change to shared core code
+  (the player controller, the save system, anything many features depend on) earns its own full
+  run, so a late red suite can still be traced.
+- **If the full run breaks: list, isolate, test, fix.** List the failures, rerun each on its own
+  to confirm it is real, reproduce it with that test, fix it, then rerun only those tests plus
+  the area the fix touched. `references/verification.md` has the loop; the test script takes
+  several names, so each rerun is one call.
+- **Stay under the number of full runs your brief gives.** Needing more is a finding to report.
+- **A test that fails alone and passes on a rerun is a flake**, not your regression, if your brief
+  lists it as known. `unity test --retries 1` reports flakes as such. A new one goes in your
+  report.
+- **Assert properties, not totals.** A test that pins a count (items in a level, rooms, a loot
+  share) breaks on every content task. Test what must hold, such as "every room has an exit", or
+  use a wide band or a fixed seed for anything statistical.
 
 **Rungs 2 and 3 run once, when the task is otherwise done**: does the game start, and does it
-build. Both need the editor, so both go through the editor agent. They are slow; do not run them
-per milestone.
+build. Run them in the Unity pass, as in section 4. They are slow; do not run them per
+milestone.
 
 **Rung 4 is a human, and it blocks.** When nothing above proves the feature behaves — which on a
 project without tests is most features — write a manual checklist: the scene to open, the exact

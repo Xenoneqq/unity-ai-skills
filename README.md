@@ -38,7 +38,7 @@ These cover the craft of working in Unity.
 | ----------------------------- | --------------------------------------------------------------------------- |
 | `unity-scene-habits`          | Prefab-first work through the editor CLI. Keeps the scene out of your diff. |
 | `unity-coding-habits`         | Everyday C# habits that hold in any project, tests included.                |
-| `unity-multiplayer-habits`    | Multiplayer with Mirror, starting with which framework the project uses.    |
+| `unity-multiplayer-habits`    | Multiplayer with Mirror. Asks the framework and who owns movement first.    |
 | `unity-file-structure-habits` | Where a new file or asset belongs, and keeping the layout from drifting.    |
 | `unity-ui-design`             | Game UI that fits this game, mocked up in HTML before it is built.          |
 | `unity-level-design`          | Levels at the player's real scale, proven playable, dressed off the grid.   |
@@ -64,7 +64,11 @@ These check and repair.
 
 Run `unity-skill-package-setup` once on a project. It writes a `CLAUDE.md` that routes each kind of work to the right skill, so the rest fire on their own.
 
-After that, reach for `unity-manage-work` when there is a list to get through and `unity-agent-worker` for a single task. `unity-scene-habits` sits underneath both whenever the engine is involved.
+After that, reach for `unity-manage-work` when there is a list to get through and `unity-agent-worker` for a single task. `unity-scene-habits` sits underneath both whenever the engine is involved. Work runs one writer at a time in your own checkout, written as files first with one Unity pass per task, and small edits skip most of the process. Parallel writers are an opt-in speed mode.
+
+Agents run Unity in batch mode by default, with the editor closed. Builders and tests run headless, so no window opens, nothing steals your focus, and a locked screen should not stall the work (not yet verified; a sleeping machine stops everything, so keep it awake). The editor is yours: agents open it only for the few jobs that need a live one and close it again, and when work is done they ask whether you want to test, open the project on the right branch and tell you what to try. While you have it open they leave Unity alone and keep doing everything else.
+
+You choose how much the manager does on its own, and can change it mid-session in plain words. Full automatic opens and closes the editor itself and saves every sign-off for the end. Semi automatic, the default, works without stopping but asks before anything that takes over your machine, without waiting on the answer. Human assisted also brings you the real decisions, a few at a time. Whenever it needs you, it says so in the conversation and on your phone, up to three times, 15 minutes apart, and then carries on with what it can.
 
 The same rules run through all of them. Prefer prefabs to scenes. Never hand-edit Unity's YAML or meta files, because the editor is the only safe writer. Never claim a change is verified further than it actually was.
 

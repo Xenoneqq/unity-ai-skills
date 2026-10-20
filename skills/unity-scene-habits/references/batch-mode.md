@@ -1,4 +1,74 @@
-# Driving the editor from the command line
+# Batch mode: the default path
+
+The editor stays closed. Every job boots a headless editor, does one thing and exits: builders
+through `-executeMethod`, tests through the test runner, compile checks from the log. No window
+opens, nothing takes the user's focus, and nothing depends on the display, so a locked screen
+should not stall it (not yet verified). A machine that goes to sleep stops batch work too. With a warm `Library/` a call takes about 10 s; a filtered
+test run in an open editor takes several times that once the recompile, domain reload and focus
+are paid.
+
+The open editor is for the user, and for the few jobs that need a live one
+([connected-editor.md](connected-editor.md), "On demand, then close"). Batch cannot run while
+any editor holds the project, the user's included (The project lock, below).
+
+## With the Unity CLI
+
+Lead with the CLI wrappers when `unity` is on `PATH`. They resolve the right editor from
+`ProjectVersion.txt` and add the batch flags for you. Check `unity run --help` and
+`unity test --help` on your CLI version rather than trusting this list.
+
+```bash
+LOG=$(mktemp -d)
+unity run "$ROOT" --timeout 900 --no-tail -l "$LOG/run.log" -- -executeMethod Builders.Rooms.Build
+echo "exit $?"
+unity test "$ROOT" --mode EditMode --filter Inventory --output "$LOG/edit.xml" --timeout 900
+unity test "$ROOT" --mode PlayMode --filter Doors --output "$LOG/play.xml" --timeout 900
+```
+
+- **`unity run`** adds `-batchmode` and `-quit` itself and refuses a `-quit` after `--`. Pass
+  `--timeout` every time, so a hang ends on its own instead of holding the project lock. Run the
+  package recipe below with the raw binary, since it must not quit.
+- **`unity test`** takes one `--filter` pattern per call. Several names are several calls, or one
+  shared name prefix. `--retries N` reruns failures and reports the ones that pass on a retry as
+  flaky; `--rerun-failed` reruns only what failed in the previous report.
+- **Categories.** `unity test` has no category flag in the versions checked. Forward the raw one
+  after `--` (`-- -testCategory Smoke`) and confirm it filtered by the totals. A test marked
+  `[Explicit]` runs only when a name or category selects it.
+- **Read the report, not the console.** The NUnit XML's `<test-run>` attributes hold the totals;
+  each `<test-case result="Failed">` holds the name and the `<message>`. No report at all means the
+  run never started: read the output for the tells in "Reading the run" below.
+- **Graphics.** Test runs keep graphics on by default, because visual and screenshot tests need
+  them. Add `-nographics` only to pure asset work.
+
+### Mute batch runs
+
+No window opens, but PlayMode tests still play their sounds through the user's speakers. One
+committed editor script mutes every batch editor and leaves the user's own sessions alone, since
+only agents run batch mode. `unity-skill-package-setup` adds it; on a project without it, offer it.
+
+```csharp
+// Assets/Editor/BatchModeMute.cs
+using UnityEditor;
+using UnityEngine;
+
+[InitializeOnLoad]
+static class BatchModeMute
+{
+    static BatchModeMute()
+    {
+        if (Application.isBatchMode) EditorUtility.audioMasterMute = true;
+    }
+}
+```
+
+Tests that check audio routing or `AudioSource.isPlaying` still pass; only the output is muted.
+Put it in the project's own editor-tools folder if it has one.
+
+[batch-tests.sh](batch-tests.sh) wraps `unity test` into one command with the same summary as
+the connected runner: exit 0 passed, 1 failed, 2 the run never started, 3 it timed out. Copy it into the project once, as with
+[run-tests.sh](run-tests.sh).
+
+Without the CLI, use the raw flags below; everything else in this file applies to both.
 
 ## Finding an editor
 
@@ -27,7 +97,7 @@ undone; a missing version is a question for the user, never a substitution.
 | `-projectPath <dir>` | The directory containing `Assets/` and `ProjectSettings/`. |
 | `-executeMethod <Class.Method>` | The static method to run. |
 | `-logFile -` | Log to stdout. Without it the log goes to a platform-specific file. |
-| `-nographics` | No GPU, faster start, works headless. Drop it only when the task renders. |
+| `-nographics` | No GPU, faster start. For asset work only; leave it off test runs and anything that renders. |
 | `-accept-apiupdate` | Lets the API updater rewrite source. Not a default — see below. |
 | `-disable-assembly-updater` | The opposite: fail fast instead of rewriting assemblies. |
 | `-silent-crashes` | Suppresses the crash dialog on a headless box. |
@@ -209,6 +279,15 @@ grep -nE 'error CS|Exception|Failed|Aborting' /tmp/unity.log | head -30
 `error CS….` means the project does not compile — the task never ran, and the compile error may
 be someone else's, not yours. Fix or report that before retrying.
 
+What the log tells you, in the order to check it:
+
+| In the log | Means |
+|---|---|
+| `error CS` | A compile error. Nothing ran. This is also the compile check: any batch run is one. |
+| `No valid Unity Editor license found` | No licence (Licensing, above). Only the user can fix it. |
+| A lock or "project is already open" error | An editor holds the project (The project lock, above). |
+| `Exiting batchmode successfully` | The method ran and returned. Its own output says whether the work did. |
+
 ## When a run takes forever
 
 The first batch-mode run against a cold or invalidated `Library/` reimports every asset. On a
@@ -231,8 +310,8 @@ Same binary, different verb. Do not combine it with `-executeMethod`.
 `-testPlatform` takes `EditMode`, `PlayMode`, or a build target name. `-testFilter`,
 `-testCategory` and `-assemblyNames` all take semicolon-separated lists. Results are NUnit XML;
 read the `<test-run>` attributes for the totals rather than scrolling the log, and
-`<test-case result="Failed">` for the failing names. PlayMode tests render, so drop
-`-nographics` for those.
+`<test-case result="Failed">` for the failing names. Leave `-nographics` off test runs: PlayMode
+and screenshot tests render.
 
 Leave out `-quit`. The test runner exits on its own when the run ends, and `-quit` can close the
 editor before the tests start.

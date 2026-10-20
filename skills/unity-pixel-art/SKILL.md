@@ -101,6 +101,11 @@ shared global state, so its output depends on whatever else ran first.
 Keep sizes to powers of two and to the project's grid: 16, 32 or 64 px per tile or character.
 A size that tiles also dithers cleanly when it is a multiple of 4.
 
+In 3D, every texture in the world shares one texel density (pixels per metre), architecture and
+props alike, with a similar level of detail. A prop at twice the wall's density reads as the
+wrong scale even when nobody can say why. Natural surfaces need irregular patches; regular blobs
+or bands read as man-made.
+
 ## 5. Import settings are part of the output
 
 A generated PNG left on Unity's defaults is blurred: bilinear filtering, mipmaps, anisotropic
@@ -117,6 +122,10 @@ filtering and compression all smear pixel art. The builder sets them every run:
 
 Then protect it with the settings test from `unity-scene-habits`' `references/builders.md`, so
 a texture that any later worker adds by hand cannot silently fall back to bilinear.
+
+A texture with holes on 3D geometry (a fence, a grate, a foliage card) goes on an opaque
+material with alpha clipping (Cutout in the Built-in pipeline), not a transparent one, so it
+sorts and fades in fog like the rest of the world.
 
 ## 6. Look at it
 
@@ -136,6 +145,12 @@ Then check it in the game, with a screenshot test (`unity-scene-habits`,
 floor that fills half the screen.
 
 Iterate on the recipe, not the pixels, and look again after every change.
+
+Show the developer early, with a screenshot: "too busy" or "wrong density" costs a parameter now
+and a rework later. For a look they will judge (a character, a prop, a material), draw 3 to 5
+variants as one sheet first, the current version first, let them pick, then build the picked
+one. Draw the sheet with the same generator code as the game asset, so the pick is what ships.
+It needs no editor, so it can run alongside other work.
 
 ## 7. Report
 
