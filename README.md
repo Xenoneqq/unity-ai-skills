@@ -38,7 +38,7 @@ These cover the craft of working in Unity.
 | ----------------------------- | --------------------------------------------------------------------------- |
 | `unity-scene-habits`          | Prefab-first work through the editor CLI. Keeps the scene out of your diff. |
 | `unity-coding-habits`         | Everyday C# habits that hold in any project, tests included.                |
-| `unity-multiplayer-habits`    | Multiplayer with Mirror, starting with which framework the project uses.    |
+| `unity-multiplayer-habits`    | Multiplayer with Mirror. Asks the framework and who owns movement first.    |
 | `unity-file-structure-habits` | Where a new file or asset belongs, and keeping the layout from drifting.    |
 | `unity-ui-design`             | Game UI that fits this game, mocked up in HTML before it is built.          |
 | `unity-level-design`          | Levels at the player's real scale, proven playable, dressed off the grid.   |

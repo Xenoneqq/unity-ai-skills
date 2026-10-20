@@ -101,7 +101,7 @@ Pointers only; the skills carry the procedure.
 - **Never push, never open a PR** without being asked.
 
 <Anything else true of this project: naming, assembly definitions, the render pipeline,
-multiplayer constraints, which scenes are contested, the art style's import rules (filtering,
+multiplayer constraints (the networking framework, and who owns player movement), which scenes are contested, the art style's import rules (filtering,
 pixels per unit).>
 ````
 
