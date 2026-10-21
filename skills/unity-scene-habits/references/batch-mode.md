@@ -43,8 +43,14 @@ unity test "$ROOT" --mode PlayMode --filter Doors --output "$LOG/play.xml" --tim
 ### Mute batch runs
 
 No window opens, but PlayMode tests still play their sounds through the user's speakers. One
-committed editor script mutes every batch editor and leaves the user's own sessions alone, since
-only agents run batch mode. `unity-skill-package-setup` adds it; on a project without it, offer it.
+committed editor script mutes every batch editor, since only agents run batch mode.
+`unity-skill-package-setup` adds it; on a project without it, offer it.
+
+The mute has to be put back. `EditorUtility.audioMasterMute` is the Game view's mute toggle, and
+Unity keeps it in the user's global editor preferences, shared by every project and every
+editor. A batch run that only sets it leaves the user's next real editor muted. So the script
+saves the user's setting before muting and restores it when the batch editor quits. A run that
+was killed never reaches `quitting`; the next normal editor load restores it instead.
 
 ```csharp
 // Assets/Editor/BatchModeMute.cs
@@ -54,15 +60,35 @@ using UnityEngine;
 [InitializeOnLoad]
 static class BatchModeMute
 {
+    const string SavedKey = "BatchModeMute.Saved";
+
     static BatchModeMute()
     {
-        if (Application.isBatchMode) EditorUtility.audioMasterMute = true;
+        if (!Application.isBatchMode)
+        {
+            Restore();
+            return;
+        }
+        // Domain reloads rerun this; keep the first saved value, which is the user's.
+        if (!EditorPrefs.HasKey(SavedKey))
+            EditorPrefs.SetBool(SavedKey, EditorUtility.audioMasterMute);
+        EditorUtility.audioMasterMute = true;
+        EditorApplication.quitting += Restore;
+    }
+
+    static void Restore()
+    {
+        if (!EditorPrefs.HasKey(SavedKey)) return;
+        EditorUtility.audioMasterMute = EditorPrefs.GetBool(SavedKey);
+        EditorPrefs.DeleteKey(SavedKey);
     }
 }
 ```
 
 Tests that check audio routing or `AudioSource.isPlaying` still pass; only the output is muted.
-Put it in the project's own editor-tools folder if it has one.
+Put it in the project's own editor-tools folder if it has one. A project still on the older
+version that only mutes (no `SavedKey`) leaves the user muted: replace it, and tell the user to
+unmute once with the Game view's mute button.
 
 [batch-tests.sh](batch-tests.sh) wraps `unity test` into one command with the same summary as
 the connected runner: exit 0 passed, 1 failed, 2 the run never started, 3 it timed out. Copy it into the project once, as with

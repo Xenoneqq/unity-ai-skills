@@ -159,7 +159,8 @@ path can do and how to read its results.
 
 Batch PlayMode tests still play sound through the user's speakers. Offer the one-file editor
 script from `unity-scene-habits`' `references/batch-mode.md` ("Mute batch runs"): it mutes only
-batch editors, so the user's own sessions keep sound. It is a tracked file, so ask, and put it
+batch editors and puts the user's own mute setting back afterwards, since Unity stores that
+setting globally. If the project already has an older version that only mutes, replace it. It is a tracked file, so ask, and put it
 in the project's editor-tools folder if it has one.
 
 ### ProBuilder, for a 3D game
